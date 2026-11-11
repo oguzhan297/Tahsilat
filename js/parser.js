@@ -25,7 +25,7 @@
   }
   // Tutar aranacak parçayı temizle: işaretler, para birimi, el yazısında ".00" yerine okunan harfler
   function amtClean(s) {
-    return s.replace(/(?<=\d[.,]?\d*)[SOo](?=[.,]?\d|[.,]\d)/g, c => c === 'S' ? '5' : '0').replace(/(\d)-(\d{2})(?!\d)/g, '$1,$2').replace(/(\d)([.,])(\d)[)\]}](?!\d)/g, '$1$2$30')
+    return s.replace(/(\d{2,})([.,])(\d)(?![\d.,])/g, '$1$2$30').replace(/(?<=\d[.,]?\d*)[SOo](?=[.,]?\d|[.,]\d)/g, c => c === 'S' ? '5' : '0').replace(/(\d)-(\d{2})(?!\d)/g, '$1,$2').replace(/(\d)([.,])(\d)[)\]}](?!\d)/g, '$1$2$30')
       .replace(/[|#*=≠₺€$«»"'“”]/g, ' ').replace(/(\d)\.(?:[CEOQ]{2}|[CEOQ]0|0[CEOQ])(?![A-Z0-9])/gi, '$1.00')
       .replace(/(\d)\s?[-–—]+(?=\s|$)/g, '$1 ').replace(/\bTL\b\.?/gi, ' ');
   }
@@ -77,6 +77,10 @@
       if (!/TAR[I1]H/.test(F[i])) continue;
       const s = lines[i].slice(F[i].search(/TAR[I1]H/));
       const m = s.match(/(\d{2})[1lI|\/]?\s?[./-]{1,2}\s?(\d{1,2})\s?[./-]{1,3}\s?\/?\s?(20\d{2})(?!\d)/);
+      if (m && gecerli(+m[1], +m[2], +m[3])) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/(?<![\d.,])(\d{1,2})\s?[.,\/-]\s?(\d{1,2})\s?(?:[.,\/|-]\s?1?|1)(?=20\d{2}(?!\d))\s?(20\d{2})(?!\d)/);   // "13,1012026", "27.10.12026": eğik çizgi 1 okunmuş
       if (m && gecerli(+m[1], +m[2], +m[3])) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
     }
     return { v: null, kesin: false };
@@ -135,6 +139,8 @@
     }
     // 3) satır başında "No: F3528102026017"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/^(?:N[O0°º]|№)\s?[:.]\s*(.*)$/); if (m) { const t = tok(m[1]); if (t) return { v: t, diger }; } }
+    // 3b) "Seri A 884435": seri harfi + sıra numarası
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bSER[I1]\s?[A-Z]\s?[:.]?\s+(\d{4,8})\b/); if (m) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
     // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2])?\s?[:.]?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; }
     if (pos) return { v: null, diger };
@@ -169,7 +175,7 @@
     if (ev.diger.length) notes.push('Diğer makbuz no: ' + ev.diger.join(', '));
 
     // tutarlar
-    let zayifTop = false;
+    let zayifTop = false, yaliRakam = null;
     const ekle = (k, v) => { d[k] = r2((d[k] || 0) + v); };
     const gor = v => { const c = Math.round(v * 100); cnt[c] = (cnt[c] || 0) + 1; };
     if (pos) {
@@ -199,10 +205,19 @@
       // başlık satırının altındaki tutarlar: sonuncusu TOPLAM (başlıkta varsa), öncekiler ödeme — hangi sütun olduğu metinden
       // anlaşılmaz; tek tutar varsa ya da hepsi aynıysa toplam kabul edilir (ödeme türü kontrol ekranında nakit varsayılır)
       for (const l of lines) { const m = l.match(/#\s?([\d.,]+)\s?[#=-]/); if (m) { const a = amounts(m[1]); if (a.length && a[0] > 0) { topAday.push(a[0]); gor(a[0]); if (d.toplam == null) d.toplam = a[0]; } } }
+      for (let i = 0; i < lines.length; i++) { if (!/YALN[I1]Z|TL\.\s?\d/.test(F[i]) || BAKIYE.test(F[i])) continue;
+        const a = amounts(lines[i].replace(/^.*?(YALN[Iİ1]Z|Yaln[ıi]z)\s?[:.,]?/i, '')).filter(v => v > 0); if (a.length !== 1) continue;
+        yaliRakam = a[0]; gor(a[0]); break; }
       // başlıkta TUTAR(I) var ama tutar yok: alt satırdaki tek tutar toplam adayıdır (zayıf — her zaman kontrol edilir)
       if (d.toplam == null && d.nakit == null && d.kart == null && d.cek == null) for (let i = 0; i + 1 < lines.length; i++) {
         if (!/\bTUTAR[I1]?\b/.test(F[i]) || amounts(lines[i]).length || BAKIYE.test(F[i + 1])) continue;
         const a = amounts(lines[i + 1]).filter(v => v > 0); if (a.length === 1) { d.toplam = a[0]; zayifTop = true; break; }
+      }
+      if (yaliRakam != null) { const iz = v => String(Math.round(v * 100)).replace(/0+$/, '');
+        if (d.toplam == null) { d.toplam = yaliRakam; zayifTop = true; }
+        else if (zayifTop && iz(d.toplam) === iz(yaliRakam)) { const k = Math.min(d.toplam, yaliRakam); if (d.toplam !== yaliRakam) notes.push(`Tutar ${d.toplam} ve “Yalnız” satırında ${yaliRakam} okundu: ondalık kaybı, ${k} alındı`); d.toplam = k; zayifTop = false; }   // ondalığı kaybolan büyük görünür
+        else if (zayifTop && Math.abs(d.toplam - yaliRakam) > 0.005) notes.push(`Tutar ${d.toplam}, “Yalnız” satırında ${yaliRakam} — farklı`);
+        else if (zayifTop) zayifTop = false;   // iki ayrı yerde aynı okundu
       }
       { const p = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), fark = [...new Set(topAday.filter(v => v > 0))];
         if (fark.length > 1) { const es = fark.find(v => Math.abs(v - p) < 0.005); if (es != null) d.toplam = es; notes.push('Birden çok TOPLAM okundu: ' + fark.join(' / ')); } }
@@ -278,7 +293,7 @@
       const celiski = sira.length > 1;
       if (k === 'yazi' || k === 'diger') continue;
       // kesin: çelişki yok ve en az bir okuma kendi içinde emin (aynı el yazısını iki kez aynı okumak kanıt sayılmaz)
-      const kesin = !celiski && ilk.isaretsiz >= 1 && !(el && k === 'tarih');
+      const kesin = !celiski && !(el && k === 'tarih') && (ilk.isaretsiz >= 1 || (k === 'tarih' && ilk.n >= 3));   // matbu makbuzda bozuk ayraçlı tarih 3 okumada aynıysa kesin
       if (!kesin) unsure.add(k);
       if (celiski) notes.push(`Okumalar farklı (${k}): ${sira.map(o => o.v).join(' / ')}`);
     }
@@ -292,5 +307,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 13, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 14, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);
