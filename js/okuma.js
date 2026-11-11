@@ -172,7 +172,7 @@ function kareCiz(){const v=$('#kvid'),vw=v.videoWidth,vh=v.videoHeight;if(!vw)re
   const px=F.width*.06/k,py=F.height*.06/k;
   let x0=Math.max(0,(F.left-ox)/k-px),y0=Math.max(0,(F.top-oy)/k-py),x1=Math.min(vw,(F.right-ox)/k+px),y1=Math.min(vh,(F.bottom-oy)/k+py);
   if(!(x1-x0>50&&y1-y0>50)){x0=0;y0=0;x1=vw;y1=vh}
-  const c=document.createElement('canvas');c.width=Math.round(x1-x0);c.height=Math.round(y1-y0);c.getContext('2d').drawImage(v,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);return c}
+  const c=document.createElement('canvas');c.width=Math.round(x1-x0);c.height=Math.round(y1-y0);c.getContext('2d').drawImage(v,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);c._olcek=Math.min(1,1000/Math.max(vw,vh));return c}
 $('#seri').onclick=()=>kameraAc('seri');
 $('#tekcek').onclick=()=>kameraAc('tek');
 $('#kyerel').onclick=()=>{KAM.sayi=0;kameraKapat();yerelKamera()};   // en yüksek çözünürlük: telefonun kendi kamerası
@@ -185,11 +185,11 @@ $('#kdek').onclick=async()=>{
     c=kareCiz();   // önce kare (basıldığı an), sonra her şey
     const f=$('#kflas');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');navigator.vibrate&&navigator.vibrate(25);
     if(!c){kMesaj('Çekilemedi, tekrar dene','kotu');return}
-    // anında kalite kontrolü aynı tuvalden (görüntüyü yeniden açmadan): bulanık / küçük kare sıraya girmez
-    let q=null;try{q=kaliteOlc(c,c.width,c.height);q.kamera=1}catch(e){}
+    // anında kalite kontrolü (görüntüyü yeniden açmadan): keskinlik video karesinin tamamından, boyut kırpılmış kareden
+    let q=null;try{const v=$('#kvid');q=kaliteOlc(v,v.videoWidth,v.videoHeight);q.min=Math.min(c.width,c.height);q.kamera=1}catch(e){}
     const k=kaliteSorun(q);
     if(k.includes('bulanik')){kMesaj('Bulanık — sabit tut, tekrar çek','kotu');return}
-    if(k.includes('kucuk')&&Math.max(c.width,c.height)<1100){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
+    if(k.includes('kucuk')&&Math.max(c.width,c.height)<700){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
     const tek=KAM.mod==='tek';
     if(tek)kameraKapat();   // tek çekimde kamerayı hemen kapat: bellek boşalsın, okuma beklemeden başlasın
     const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b){toast('Çekilemedi, tekrar dene');return}

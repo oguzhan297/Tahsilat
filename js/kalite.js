@@ -3,8 +3,9 @@
 // Eşikler test arşivindeki 23 gerçek fotoğraf ve bunların bulanık / karanlık / soluk / küçük kopyalarıyla ayarlandı.
 async function fotoKalite(src){const im=await openImage(src);return kaliteOlc(im,im.naturalWidth,im.naturalHeight)}
 // im: <img> ya da <canvas> (kamera karesi). Kare 1000 px'e küçültülüp ölçülür.
-function kaliteOlc(im,W,H){
-  const S=Math.min(1,1000/Math.max(W,H)),w=Math.max(1,Math.round(W*S)),h=Math.max(1,Math.round(H*S));
+// olcek: kırpılmış kamera karesinde tam karenin ölçeği verilir — keskinlik oranı ölçeğe bağlı, eşik 1000 px'e küçültülmüş tam kareye göre ayarlı
+function kaliteOlc(im,W,H,olcek){
+  const S=olcek||Math.min(1,1000/Math.max(W,H)),w=Math.max(1,Math.round(W*S)),h=Math.max(1,Math.round(H*S));
   const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,w,h);
   const p=x.getImageData(0,0,w,h).data,g=new Float32Array(w*h);c.width=c.height=1;
   for(let i=0,j=0;i<p.length;i+=4,j++)g[j]=.299*p[i]+.587*p[i+1]+.114*p[i+2];
@@ -27,7 +28,7 @@ const KALITE={
 // Bulanık ve düşük çözünürlük okumayı bozar (testte bulanıkta doğru fiş 23/23 → 13/23): her zaman uyar.
 // Karanlık ve soluk fotoğrafları PaddleOCR çoğunlukla doğru okur: yalnız okumada da sorun varsa sebep olarak göster.
 function kaliteSorun(o,okumaSorunlu){if(!o)return [];const k=[];
-  if(o.min<(o.kamera?600:900))k.push('kucuk');else if(o.keskin<0.07)k.push('bulanik');
+  if(o.min<(o.kamera?450:900))k.push('kucuk');else if(o.keskin<0.07)k.push('bulanik');
   if(okumaSorunlu){if(o.p95<110)k.push('karanlik');else if(o.kontrast<90&&o.p5>85)k.push('soluk')}
   return k}
 function kaliteHTML(r){const k=kaliteSorun(r.q,isBad(r));if(!k.length)return '';

@@ -1,6 +1,6 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=12;
+const APP_VER=13;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
   12:['Kamerada çerçeve Dikey / Yatay seçilebilir (üstteki düğme; seçimin hatırlanır). Yatay: koçan makbuzlar için ekran genişliğinde çerçeve','Fotoğraf yalnız çerçevenin içinden alınır: yandaki makbuz, masa, klavye okumaya karışmaz'],
