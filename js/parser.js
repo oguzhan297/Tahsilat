@@ -116,7 +116,8 @@
         if (ust.length >= 3 && /[A-ZÇĞİÖŞÜ]{3}/.test(ust) && !/^\d/.test(ust)) t = FIRMA_SOZ.test(F[i - 1]) ? ust : (ust + ' ' + t).trim();
       }
       t = firmaKisalt(t);
-      if (t.length >= 3) return t;
+      // yalnız ekten ibaret ad ("PAZ", "LTD STI") firma değildir: logodaki ad okunamamış — boş bırak, kullanıcı yazar
+      if (t.length >= 3 && fold(t).replace(/\b(PAZ|DAG|TIC|SAN|VE|LTD|STI|A\.?S|GIDA|TOPTAN|PAZARLAMA)\b|[^A-Z]/g, '').length >= 3) return t;
     }
     return '';
   }
@@ -283,5 +284,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 5, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 6, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);
