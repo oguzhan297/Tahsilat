@@ -25,7 +25,8 @@
   }
   // Tutar aranacak parçayı temizle: işaretler, para birimi, el yazısında ".00" yerine okunan harfler
   function amtClean(s) {
-    return s.replace(/[|#*=≠₺€$«»"'“”]/g, ' ').replace(/(\d)\.(?:[CEOQ]{2}|[CEOQ]0|0[CEOQ])(?![A-Z0-9])/gi, '$1.00')
+    return s.replace(/(\d)-(\d{2})(?!\d)/g, '$1,$2').replace(/(\d)([.,])(\d)[)\]}](?!\d)/g, '$1$2$30')
+      .replace(/[|#*=≠₺€$«»"'“”]/g, ' ').replace(/(\d)\.(?:[CEOQ]{2}|[CEOQ]0|0[CEOQ])(?![A-Z0-9])/gi, '$1.00')
       .replace(/(\d)\s?[-–—]+(?=\s|$)/g, '$1 ').replace(/\bTL\b\.?/gi, ' ');
   }
   // Parçadaki tutarlar (sırayla). Uzun rakam dizileri (telefon, IBAN, makbuz no) ve baştaki sıfırlı numaralar tutar değildir.
@@ -65,6 +66,7 @@
   const gecerli = (g, a, y) => { const d = new Date(y, a - 1, g); return d.getDate() === g && d.getMonth() === a - 1 && y >= 2015 && d <= new Date(Date.now() + 864e5); };
   const trh = (g, a, y) => `${String(g).padStart(2, '0')}.${String(a).padStart(2, '0')}.${y}`;
   function tarihBul(lines, F) {
+    lines = lines.map((l, i) => /TAR[I1]H/.test(F[i]) ? l.replace(/(?<=[:\s.]|^)[ZOolISB](?=\d[./-]|[./-]\d)|(?<=\d)[ZOolISB](?=[./-])/g, c => ({ Z: '2', O: '0', o: '0', l: '1', I: '1', S: '5', B: '8' }[c])) : l);
     const tam = /(?<![\d.])(\d{1,2})\s?[./-]\s?(\d{1,2})\s?[./-]\s?(20\d{2})(?!\d)/;
     let kesin = null;
     const sirali = lines.map((l, i) => i).sort((a, b) => (/TAR[I1]H/.test(F[b]) ? 1 : 0) - (/TAR[I1]H/.test(F[a]) ? 1 : 0));
@@ -133,11 +135,12 @@
     // 3) satır başında "No: F3528102026017"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/^(?:N[O0°º]|№)\s?[:.]\s*(.*)$/); if (m) { const t = tok(m[1]); if (t) return { v: t, diger }; } }
     // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º])?\s?[:.]?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: m[1], diger }; }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2])?\s?[:.]?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; }
     if (pos) return { v: null, diger };
     // 5) koçan seri numarası: "N 100953", "№ 000330" ya da tek başına / satır sonunda baştan sıfırlı 4-6 hane
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/^(?:N[O0°º]?|№)\s(\d{4,6})$/); if (m) return { v: m[1], diger, zayif: true }; }
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{3,5})$/); if (m && !/TEL|GSM|FAX|IBAN/.test(F[i].slice(Math.max(0, F[i].length - m[1].length - 14)))) return { v: m[1], diger, zayif: true }; }
+    const seri = v => v.replace(/^1(?=0{2,})/, '0').replace(/^0+(?=\d)/, '');
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º2]?|№)\s(\d{4,6})$/); if (m) return { v: seri(m[1]), diger, zayif: true }; }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{3,5})$/); if (m && !/TEL|GSM|FAX|IBAN/.test(F[i].slice(Math.max(0, F[i].length - m[1].length - 14)))) return { v: seri(m[1]), diger, zayif: true }; }
     return { v: null, diger };
   }
 
@@ -156,7 +159,7 @@
     const d = { firma: '', tarih: '', evrak_no: '', toplam: null, cek: null, kart: null, nakit: null, diger: null, yazi: null };
     const unsure = [], notes = [], cnt = {};
     const pos = /ONAY\sKODU|KART\sHAM[I1]L[I1]|[I1]SYER[I1]\sNO|\bTERM\.?\s?NO/.test(all);
-    const cekTablo = F.some(l => /BANKA/.test(l) && /(CEK\s?NO|HESAP\s?NO|[I1]BAN)/.test(l) && /(VADE|V\.\s?TAR[I1]H)/.test(l));
+    const cekTablo = F.some(l => /BANKA/.test(l) && /(CEK\s?NO|HESAP\s?NO|[I1]BAN|NUMARASI)/.test(l) && /(VADE|V\.\s?TAR[I1]H|TAR[I1]H[I1])/.test(l)) || /TAHS[I1]L\s?SARTI\s?[I1]LE/.test(all);
     const el = !pos && (cekTablo || (/\bSAY[I1]N\b/.test(all) && /(YAZ[I1]YLA|TAHS[I1]L\s?EDEN|ODEYEN)/.test(all)));
 
     d.firma = firmaBul(lines, F, pos);
@@ -171,7 +174,7 @@
       // POS slipi: "6.330,32 TL" — tutar satırı
       for (let i = 0; i < lines.length; i++) { if (!/\bTL\b/.test(F[i]) || BAKIYE.test(F[i])) continue; const a = amounts(lines[i]).filter(v => v > 0); if (a.length) { d.kart = d.toplam = a[0]; gor(a[0]); gor(a[0]); break; } }
     } else {
-      const tablo = [];   // yalnız başlık olan ödeme satırları ("NAKİT ÇEK KREDİ KARTI TOPLAM") — tutarlar alt satırda
+      const tablo = [], topAday = [];   // yalnız başlık olan ödeme satırları ("NAKİT ÇEK KREDİ KARTI TOPLAM") — tutarlar alt satırda
       for (let i = 0; i < lines.length; i++) {
         const f = F[i];
         if (BAKIYE.test(f) || /CEK\s?NO|CEK\s?VEYA|CEK\s?-?\s?SENET|HESAP\s?NO|TOPLAM\s?CAR[I1]/.test(f)) continue;   // bakiye satırları ve çek tablosu başlıkları
@@ -182,16 +185,19 @@
         let okunan = 0;
         for (let j = 0; j < bulunan.length; j++) {
           const b = bulunan[j], bitis = j + 1 < bulunan.length ? bulunan[j + 1].at : lines[i].length;
-          const a = amounts(lines[i].slice(b.son, bitis));   // tutar anahtar sözcükten sonra ("Nakit Tahsilat : 4.700,00", "|16650 TL.")
+          const kes = F[i].slice(b.son, bitis).search(/\b(TEL|FAX|GSM|MERS[I1]S|VERG[I1]|V\.\s?D|MERKE[ZS]?|ADRES|[I1]BAN|NO\s?:)\b/);
+          const a = amounts(lines[i].slice(b.son, kes >= 0 ? b.son + kes : bitis));   // tutar anahtar sözcükten sonra ("Nakit Tahsilat : 4.700,00", "|16650 TL.")
           if (!a.length) continue;
           okunan++;
-          if (b.k === 'toplam') { if (d.toplam == null || a[0] > 0) d.toplam = a[0]; } else ekle(b.k, a[0]);
+          if (b.k === 'toplam') { topAday.push(a[0]); if (d.toplam == null || a[0] > 0) d.toplam = a[0]; } else ekle(b.k, a[0]);
           gor(a[0]);
         }
         if (!okunan && bulunan.length >= 2 && bulunan.some(b => b.k !== 'toplam')) tablo.push({ i, bulunan });
       }
       // başlık satırının altındaki tutarlar: sonuncusu TOPLAM (başlıkta varsa), öncekiler ödeme — hangi sütun olduğu metinden
       // anlaşılmaz; tek tutar varsa ya da hepsi aynıysa toplam kabul edilir (ödeme türü kontrol ekranında nakit varsayılır)
+      { const p = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), fark = [...new Set(topAday.filter(v => v > 0))];
+        if (fark.length > 1) { const es = fark.find(v => Math.abs(v - p) < 0.005); if (es != null) d.toplam = es; notes.push('Birden çok TOPLAM okundu: ' + fark.join(' / ')); } }
       for (const tb of tablo) {
         if (d.toplam != null || d.nakit != null || d.kart != null || d.cek != null) break;
         const alt = lines[tb.i + 1] || ''; if (BAKIYE.test(F[tb.i + 1] || '')) continue;
@@ -277,5 +283,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 3, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 4, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);

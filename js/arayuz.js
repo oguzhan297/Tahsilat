@@ -95,7 +95,7 @@ function renderSum(){
   $('#xlsx').disabled=!done.length;$('#csv').disabled=!done.length;$('#copy').disabled=!done.length;
 }
 function refreshCard(r){
-  const c=document.getElementById('c_'+r.id);if(!c){render();return}
+  const c=document.getElementById('c_'+r.id);if(!c){renderSum();return}   // süzgeç yüzünden ekranda olmayan kart: baştan çizme (yazılan kutu silinir, klavye kapanır)
   c.querySelector('.head').innerHTML=headHTML(r);
   c.querySelector('.checks').innerHTML=checksHTML(r);
   c.querySelectorAll('input[data-k]').forEach(i=>{const f=FIELDS.find(x=>x.k===i.dataset.k);if(i!==document.activeElement)i.value=fv(f,r.d[f.k]);i.classList.toggle('unsure',!!(r.unsure&&r.unsure.includes(f.k)));i.classList.toggle('calc',!!(r.auto&&r.auto.includes(f.k)))});
@@ -136,9 +136,12 @@ document.addEventListener('change',e=>{
   if(f.t==='num'){refill(r,f.k);if(r.unsure&&(r.auto||[]).length)r.unsure=r.unsure.filter(k=>!r.auto.includes(k))}   // kendiliğinden hesaplanan alan artık şüpheli değil
   if(['firma','evrak_no','tarih'].includes(f.k)&&(!r.d.aciklama||r.d.aciklama===r._ack)){r.d.aciklama=mkAck(r.d);r._ack=r.d.aciklama}
   i.value=fv(f,r.d[f.k]);
+  // uyarı listesi alanların üstünde: kısalıp uzayınca ekran kaymasın — odaktaki (ya da değişen) kutu aynı yerde kalsın
+  const tut=document.activeElement&&document.activeElement.matches&&document.activeElement.matches('input,textarea')?document.activeElement:i,y0=tut.getBoundingClientRect().top;
   if(r.akt){r.akt=null;toast('Makbuz değişti: bir sonraki Luca dosyasına yeniden girecek')}
   save(r);
-  rows.forEach(x=>{if(x.status==='done')refreshCard(x)});
+  rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI();
+  if(tut.isConnected){const dy=tut.getBoundingClientRect().top-y0;if(Math.abs(dy)>1)window.scrollBy(0,dy)}
 });
 
 const pm=$('#pm');
