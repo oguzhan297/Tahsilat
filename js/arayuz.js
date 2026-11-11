@@ -63,7 +63,7 @@ function render(){
       <div class="head" data-tog="${r.id}">${headHTML(r)}</div>
       <div class="body">
         ${hizliHTML(r)}
-        ${r.thumb?`<img class="big" src="${r.thumb}" data-zoom alt="Makbuz fotoğrafı (dokun: büyüt)">`:''}
+        ${r.thumb?`<img class="big" src="${r.thumb}" data-zoom="${r.id}" alt="Makbuz fotoğrafı (dokun: büyüt)">`:''}
         ${r.src==='foto'||r.hasImg?`<div class="devam">${(r.sayfa||1)>1?`${ik('sayfa')}${r.sayfa} fotoğraftan birlikte okundu · `:''}<button class="lnk" data-devam="${r.id}">${ik('arti')}Makbuz uzunsa devamını ekle</button>${S.key&&S.mode!=='api'?` · <button class="lnk" data-claude="${r.id}">${ik('kalem')}Claude ile oku</button>`:''}</div>`:''}
         ${kaliteHTML(r)}
         <div class="checks">${checksHTML(r)}</div>
@@ -117,11 +117,48 @@ async function kirpDoldur(r){const c=document.getElementById('c_'+r.id);if(!c||!
     r._kaynak=await new Promise((a,h)=>{const i=new Image();i.onload=()=>a(i);i.onerror=h;i.src=src})}catch(e){return}}
   const I=r._kaynak,W=I.naturalWidth,H=I.naturalHeight;
   for(const el of im){const k=el.dataset.kirp;if(!r._kirp[k]){const L=r.ank[{tarih:'tarih',evrak_no:'no',tutar:'tutar'}[k]]||(k==='evrak_no'&&r.ank.tarih);if(!L)continue;const h=Math.max(.012,L[3]-L[1]);
-      const b=k==='tutar'?[L[0]-.03,L[1]-h*1.2,1,L[3]+h*2.8]:k==='tarih'?[L[0]-.02,L[1]-h*1.4,Math.min(1,L[0]+Math.max(.45,(L[2]-L[0])*5)),L[3]+h*1.4]:[L[0]-.03,L[1]-h,Math.min(1,L[0]+.42),L[3]+h];
+      const b=k==='tutar'?[L[0]-.06,L[1]-h*2,1,L[3]+h*4]:k==='tarih'?[L[0]-.06,L[1]-h*2.5,Math.min(1,L[0]+Math.max(.55,(L[2]-L[0])*6)),L[3]+h*2.5]:[L[0]-.06,L[1]-h*2,Math.min(1,L[0]+.5),L[3]+h*2];
+      (r._bolge=r._bolge||{})[k]=b.map(v=>Math.max(0,Math.min(1,v))).join(',');
       const x0=Math.max(0,b[0])*W,y0=Math.max(0,b[1])*H,x1=Math.min(1,b[2])*W,y1=Math.min(1,b[3])*H;if(x1-x0<10||y1-y0<10)continue;
       const s=Math.min(1.5,800/(x1-x0)),cv=document.createElement('canvas');cv.width=Math.round((x1-x0)*s);cv.height=Math.round((y1-y0)*s);
       cv.getContext('2d').drawImage(I,x0,y0,x1-x0,y1-y0,0,0,cv.width,cv.height);r._kirp[k]=cv.toDataURL('image/jpeg',.85);cv.width=cv.height=1}
-    if(r._kirp[k])el.src=r._kirp[k]}}
+    if(r._kirp[k]){el.src=r._kirp[k];if(r._bolge&&r._bolge[k])el.dataset.bolge=r._bolge[k]}}}
+// ---- Tam ekran fotoğraf görüntüleyici: iki parmakla yakınlaştır, tek parmakla kaydır, çift dokun: yakın/uzak ----
+// Sayfanın kendisini yakınlaştırmak (iPhone) ağır katmanlarda görüntünün kaybolmasına yol açıyordu; burada yalnız fotoğraf büyür.
+const GV={el:null,img:null,b:1,s:1,x:0,y:0,nw:0,nh:0};
+function gvKur(){if(GV.el)return;const d=document.createElement('div');d.className='gv';d.hidden=true;
+  d.innerHTML='<img alt=""><button class="btn small gv-kapat" type="button">Kapat</button><div class="gv-ipucu">İki parmakla yakınlaştır · çift dokun: yakın / uzak</div>';
+  document.body.appendChild(d);GV.el=d;GV.img=d.querySelector('img');d.querySelector('.gv-kapat').onclick=gvKapat;
+  let t0=null,son=0;const P=e=>[...e.touches].map(t=>[t.clientX,t.clientY]);
+  d.addEventListener('touchstart',e=>{if(e.target.closest('.gv-kapat'))return;e.preventDefault();const p=P(e);
+    if(p.length===1){const n=Date.now();if(n-son<280){const k=GV.s>1.5?1:3;gvOlcek(k,p[0][0],p[0][1]);son=0;t0=null;return}son=n}
+    t0={p,s:GV.s,x:GV.x,y:GV.y}},{passive:false});
+  d.addEventListener('touchmove',e=>{e.preventDefault();if(!t0)return;const p=P(e);
+    if(p.length>=2&&t0.p.length>=2){const d0=Math.hypot(t0.p[0][0]-t0.p[1][0],t0.p[0][1]-t0.p[1][1]),d1=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);
+      const m0=[(t0.p[0][0]+t0.p[1][0])/2,(t0.p[0][1]+t0.p[1][1])/2],m1=[(p[0][0]+p[1][0])/2,(p[0][1]+p[1][1])/2];
+      const s=Math.min(10,Math.max(1,t0.s*d1/d0)),k=s/t0.s;GV.s=s;GV.x=m1[0]-(m0[0]-t0.x)*k;GV.y=m1[1]-(m0[1]-t0.y)*k}
+    else if(p.length===1){GV.x=t0.x+p[0][0]-t0.p[0][0];GV.y=t0.y+p[0][1]-t0.p[0][1]}
+    gvUygula()},{passive:false});
+  d.addEventListener('touchend',e=>{if(e.touches.length)t0={p:P(e),s:GV.s,x:GV.x,y:GV.y};else t0=null},{passive:false});
+  d.addEventListener('wheel',e=>{e.preventDefault();gvOlcek(GV.s*(e.deltaY<0?1.2:1/1.2),e.clientX,e.clientY)},{passive:false});
+  d.addEventListener('dblclick',e=>gvOlcek(GV.s>1.5?1:3,e.clientX,e.clientY));
+  window.addEventListener('popstate',()=>{if(!GV.el.hidden)gvKapat(true)})}
+function gvOlcek(s,cx,cy){s=Math.min(10,Math.max(1,s));const k=s/GV.s;GV.x=cx-(cx-GV.x)*k;GV.y=cy-(cy-GV.y)*k;GV.s=s;gvUygula()}
+// fotoğraf ekrandan kaçmasın: büyükse kenarı ekranın dışında kalamaz, küçükse ortada durur
+function gvUygula(){const W=innerWidth,H=innerHeight,w=GV.nw*GV.b*GV.s,h=GV.nh*GV.b*GV.s;
+  GV.x=w<=W?(W-w)/2:Math.min(0,Math.max(W-w,GV.x));GV.y=h<=H?(H-h)/2:Math.min(0,Math.max(H-h,GV.y));
+  GV.img.style.transform=`translate(${GV.x}px,${GV.y}px) scale(${GV.b*GV.s})`}
+async function gvAc(r,bolge){gvKur();let src=null,url=null;
+  try{if(r.hasOrig){const o=await IDB.get('orig',r.id);if(o&&o[0])src=url=URL.createObjectURL(o[0])}}catch(e){}
+  if(!src)src=r.thumb||(r.hasImg?await IDB.get('imgs',r.id).catch(()=>null):null);if(!src)return;
+  const I=GV.img;I.onload=()=>{GV.nw=I.naturalWidth;GV.nh=I.naturalHeight;I.style.width=GV.nw+'px';I.style.height=GV.nh+'px';
+    GV.b=Math.min(innerWidth/GV.nw,innerHeight/GV.nh);GV.s=1;GV.x=GV.y=0;gvUygula();
+    if(bolge){const [x0,y0,x1,y1]=bolge,zw=Math.min(x1-x0,.7),s=Math.min(10,Math.max(1.3,innerWidth*.98/(zw*GV.nw*GV.b)));GV.s=s;const T=GV.b*s;   // bölgenin ortasına yakınlaş (etiket ve değer birlikte görünsün)
+      GV.x=innerWidth/2-(x0+x1)/2*GV.nw*T;GV.y=innerHeight/2-(y0+y1)/2*GV.nh*T;gvUygula()}};
+  if(GV._url)URL.revokeObjectURL(GV._url);GV._url=url;I.src=src;GV.el.hidden=false;document.body.classList.add('gv-acik');
+  try{history.pushState({gv:1},'')}catch(e){}}
+function gvKapat(geri){if(!GV.el||GV.el.hidden)return;GV.el.hidden=true;document.body.classList.remove('gv-acik');GV.img.removeAttribute('src');
+  if(!geri)try{if(history.state&&history.state.gv)history.back()}catch(e){}}
 // "ileri" (Enter): sonraki eksik alana geç; sonuncudaysa klavyeyi kapat
 // dokununca içindeki okunan değer seçili gelsin: yazınca yerine geçer
 document.addEventListener('focusin',e=>{const i=e.target;if(i.classList&&i.classList.contains('hz'))setTimeout(()=>{try{i.select()}catch(x){}},0)});
@@ -139,6 +176,7 @@ function refreshCard(r){
 }
 
 document.addEventListener('click',e=>{
+  const kz=e.target.closest('img[data-kirp]');if(kz&&kz.dataset.bolge){const c=kz.closest('.card'),r=c&&rows.find(x=>'c_'+x.id===c.id);if(r)gvAc(r,kz.dataset.bolge.split(',').map(Number));return}
   const t=e.target.closest('[data-tog],[data-del],[data-retry],[data-zoom],[data-reparse],[data-copyocr],[data-recam],[data-regal],[data-f],[data-aktsil],[data-bildir],[data-bildirac],[data-devam],[data-claude],[data-onay]');if(!t)return;
   if(t.dataset.claude){const r=rows.find(x=>x.id===t.dataset.claude);if(r)claudeOku(r);return}
   if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);toast('Onaylandı')}return}
@@ -152,7 +190,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.copyocr){const ta=document.querySelector(`[data-ocr="${t.dataset.copyocr}"]`);const txt=ta?ta.value:'';
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('Okunan metin kopyalandı')).catch(()=>{try{ta.focus();ta.select();ta.setSelectionRange(0,txt.length);const ok=document.execCommand('copy');toast(ok?'Okunan metin kopyalandı':'Kopyalanamadı — metne uzun basıp “Tümünü Seç”')}catch(x){toast('Kopyalanamadı')}});return}
   if(t.dataset.reparse){const r=rows.find(x=>x.id===t.dataset.reparse);const ta=document.querySelector(`[data-ocr="${r.id}"]`);applyParse(r,ta.value);r.open=true;save(r);render();toast('Metin yeniden okundu');return}
-  if(t.dataset.zoom!==undefined){t.classList.toggle('zoom');return}
+  if(t.dataset.zoom!==undefined){const r=rows.find(x=>x.id===t.dataset.zoom);if(r)gvAc(r);return}
   if(t.dataset.tog){const r=rows.find(x=>x.id===t.dataset.tog);r.open=!r.open;if(r.open)loadImg(r);render();if(r.open)document.getElementById('c_'+r.id)?.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(t.dataset.del){
     if(t.dataset.armed!=='1'){t.dataset.armed='1';t.textContent='Emin misin?';setTimeout(()=>{if(t.isConnected){t.dataset.armed='';t.textContent='Sil'}},3000);return}

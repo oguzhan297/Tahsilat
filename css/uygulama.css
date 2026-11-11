@@ -333,3 +333,12 @@ ul.yenilik{margin:10px 0 14px;padding-left:20px;color:#cbd5e1;font-size:14px;lin
 .hz-k:not([src]){display:none}
 .hizli input.hz{width:100%;font:inherit;font-size:20px;font-weight:600;padding:10px 12px;border-radius:12px;border:1px solid rgba(251,191,36,.5);background:rgba(2,6,23,.45);color:var(--ink);font-variant-numeric:tabular-nums}
 .hz-s.tamam label::after{content:' ✓';color:var(--ok)}.hz-s.tamam input.hz{border-color:rgba(16,185,129,.5)}
+
+/* Tam ekran fotoğraf görüntüleyici */
+.gv{position:fixed;inset:0;z-index:60;background:#000;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none}
+.gv[hidden]{display:none}
+.gv img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;will-change:transform;-webkit-user-drag:none}
+.gv-kapat{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;background:rgba(15,23,42,.75)!important;color:#fff;border:1px solid rgba(255,255,255,.25)!important}
+.gv-ipucu{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;color:#cbd5e1;font-size:12.5px;text-shadow:0 1px 2px #000;pointer-events:none}
+body.gv-acik{overflow:hidden}
+.hz-k{cursor:zoom-in}
