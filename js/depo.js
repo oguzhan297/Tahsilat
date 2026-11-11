@@ -1,0 +1,49 @@
+// Kalıcı saklama: makbuzlar ve fotoğraflar bu telefonda (IndexedDB); yedek indir / yükle
+// ---- Kalıcı saklama: bu telefonda (IndexedDB) ----
+const IDB=(()=>{let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const q=indexedDB.open('tahsilat',1);q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains('rows'))d.createObjectStore('rows',{keyPath:'id'});if(!d.objectStoreNames.contains('imgs'))d.createObjectStore('imgs');if(!d.objectStoreNames.contains('orig'))d.createObjectStore('orig')};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}));
+  const req=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+  const w=(st,fn)=>open().then(d=>new Promise((res,rej)=>{const t=d.transaction(st,'readwrite');fn(t.objectStore(st));t.oncomplete=()=>res();t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)}));
+  return {put:(st,v,k)=>w(st,s=>k===undefined?s.put(v):s.put(v,k)),del:(st,k)=>w(st,s=>s.delete(k)),
+    all:st=>open().then(d=>req(d.transaction(st).objectStore(st).getAll())),get:(st,k)=>open().then(d=>req(d.transaction(st).objectStore(st).get(k)))};
+})();
+const ser=r=>({ocr:r.ocr??null,d:r.d||{},unsure:r.unsure||[],auto:r.auto||[],src:r.src||'',_ack:r._ack||'',hasImg:!!r.hasImg,created:r.created||Date.now(),el:!!r.el,onay:!!r.onay,okuFirma:r.okuFirma||'',q:r.q||null,akt:r.akt||null,oku:r.oku||null,hasOrig:!!r.hasOrig,sayfa:r.sayfa||1,bildirildi:r.bildirildi||null,hesap:r.hesap||null});
+function setStore(st){const el=$('#sync');if(!el)return;el.innerHTML=(st==='ok'?ik('telefon'):'')+({ok:'Bu telefonda kayıtlı',err:'⚠ Kaydedilemedi — CSV’yi indirmeden kapatma',wait:'Yükleniyor…'}[st]||'');el.className='sync s-'+st}
+function save(r){if(!r||r.status!=='done')return;IDB.put('rows',{id:r.id,...ser(r)}).then(()=>setStore('ok')).catch(()=>{setStore('err');toast('Kaydedilemedi: telefon hafızası dolu olabilir.')})}
+async function removeRows(list){
+  const ids=new Set(list.map(x=>x.id));rows=rows.filter(x=>!ids.has(x.id));render();
+  try{for(const r of list){await IDB.del('rows',r.id);await IDB.del('imgs',r.id);await IDB.del('orig',r.id)}}catch(e){toast('Silinemedi, tekrar dene.')}
+}
+// Fotoğraf asılları (devam fotoğrafı ve hata bildirimi için): son ORIG_N raporunkiler saklanır, eskiler silinir
+const ORIG_N=40;
+async function saveOrig(r,pages){try{await IDB.put('orig',pages,r.id);r.hasOrig=true;
+  const eski=rows.filter(x=>x.hasOrig).sort((a,b)=>(b.created||0)-(a.created||0)).slice(ORIG_N);
+  for(const x of eski){await IDB.del('orig',x.id);x.hasOrig=false;save(x)}}catch(e){}}
+async function saveImg(r,src){if(!src)return;try{await IDB.put('imgs',src,r.id);r.hasImg=true;save(r)}catch(e){}}
+async function loadImg(r){
+  if(r.thumb||!r.hasImg||r._imgLoading)return;r._imgLoading=true;
+  try{const src=await IDB.get('imgs',r.id);if(src){r.thumb=src;if(r.open)render()}}catch(e){}
+  r._imgLoading=false;
+}
+const sortRows=()=>rows.sort((a,b)=>((a.status==='done')-(b.status==='done'))||((b.created||0)-(a.created||0)));
+async function load(){
+  try{const all=await IDB.all('rows');rows=all.map(r=>({...r,status:'done',auto:r.auto||[],open:false}));
+    setStore('ok')}
+  catch(e){setStore('err');notice('Bu tarayıcı veri saklamaya izin vermiyor (gizli sekme olabilir). Makbuzlar kaydedilmez; CSV’yi indirmeyi unutma.')}
+  sortRows();render();
+}
+
+// ---- Yedek ----
+$('#bk').onclick=async()=>{
+  const out=[];for(const r of rows.filter(x=>x.status==='done')){let img=null;if(r.hasImg){try{img=await IDB.get('imgs',r.id)}catch(e){}}out.push({id:r.id,...ser(r),img})}
+  const d=new Date();offer(`Tahsilat_Yedek_${d.toISOString().slice(0,10)}.json`,JSON.stringify({app:'tahsilat',v:1,rows:out}));
+};
+$('#bkin').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const j=JSON.parse(await f.text());if(!j||j.app!=='tahsilat'||!Array.isArray(j.rows))throw 0;
+    let n=0;for(const x of j.rows){if(!x||!x.id||!x.d)continue;if(rows.some(r=>r.id===x.id))continue;
+      const r={id:String(x.id),status:'done',open:false,d:x.d,unsure:x.unsure||[],auto:x.auto||[],src:x.src||'',_ack:x._ack||'',created:x.created||Date.now(),el:!!x.el,onay:!!x.onay,okuFirma:x.okuFirma||'',akt:x.akt||null,hasImg:false};
+      rows.push(r);save(r);if(x.img)await saveImg(r,x.img);n++}
+    sortRows();render();toast(n?`${n} makbuz yedekten yüklendi`:'Yedekteki makbuzlar zaten listede');
+  }catch(err){toast('Bu dosya geçerli bir yedek değil.')}
+});
