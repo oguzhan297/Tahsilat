@@ -1,10 +1,10 @@
 // Uygulamayı internetsiz de açılabilir yapar. Sürüm değişince eski önbellek silinir.
-const V='tahsilat-v4';
+const V='tahsilat-v5';
 // PaddleOCR (paddle.js, ONNX Runtime, modeller) büyük dosyalar: ayrı önbellekte durur, uygulama sürümü değişince silinmez.
 // Önbellek adı Z Raporu uygulamasıyla ortak (aynı adres: oguzhan297.github.io) → modeller iki uygulama için bir kez iner.
 const OCR='zrapor-ocr-1';
 const isOcr=u=>u.hostname==='paddle-model-ecology.bj.bcebos.com'||(u.hostname==='cdn.jsdelivr.net'&&u.pathname.startsWith('/npm/onnxruntime-web@'))||(u.origin===self.location.origin&&u.pathname.endsWith('/paddle.js'));
-const SHELL=['./','./index.html','./css/uygulama.css?v=4','./js/parser.js?v=4','./js/goruntu.js?v=4','./js/paddle-worker.js?v=4','./js/temel.js?v=4','./js/depo.js?v=4','./js/ayarlar.js?v=4','./js/kontrol.js?v=4','./js/kalite.js?v=4','./js/arayuz.js?v=4','./js/okuyucu-claude.js?v=4','./js/okuyucu-tesseract.js?v=4','./js/okuyucu-paddle.js?v=4','./js/okuma.js?v=4','./js/disari.js?v=4','./js/baslat.js?v=4','./ikon.svg?v=4','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
+const SHELL=['./','./index.html','./css/uygulama.css?v=5','./js/parser.js?v=5','./js/goruntu.js?v=5','./js/paddle-worker.js?v=5','./js/temel.js?v=5','./js/depo.js?v=5','./js/ayarlar.js?v=5','./js/kontrol.js?v=5','./js/kalite.js?v=5','./js/arayuz.js?v=5','./js/okuyucu-claude.js?v=5','./js/okuyucu-tesseract.js?v=5','./js/okuyucu-paddle.js?v=5','./js/okuma.js?v=5','./js/disari.js?v=5','./js/baslat.js?v=5','./ikon.svg?v=5','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 // cache:'reload' → tarayıcının kendi önbelleğindeki eski kopyayı değil, sunucudaki güncel dosyayı al
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,u.startsWith('http')?{mode:'no-cors'}:{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()))});

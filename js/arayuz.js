@@ -11,12 +11,16 @@ const aktTarih=(t,uzun)=>{const d=new Date(t);return uzun?d.toLocaleDateString('
 // Okuma hatası bildirimi: okunan ↔ şimdiki farkı
 function duzeltilen(r){if(!r.oku)return [];const n=v=>v==null||v===''?null:typeof v==='number'?Math.round(v*100):String(v).trim();
   return Object.keys(r.oku).filter(k=>n(r.oku[k])!==n(r.d[k])&&!(r.auto||[]).includes(k))}
-function duzeltmeHTML(r){const k=duzeltilen(r);if(!k.length)return '';const ad=x=>(FIELDS.find(f=>f.k===x)||{}).l||x;
-  return `<div class="duz">${ik('kalem')}Düzelttiğin alanlar: <b>${k.map(x=>esc(ad(x))).join(', ')}</b><div class="hint">Okuyucu bunları yanlış okumuş. Bildirirsen bu makbuz test arşivine eklenir ve aynı hata bir daha tekrarlanmaz.</div><button class="btn small" data-bildirac="${r.id}">${ik('paylas')}Okuma hatasını bildir</button></div>`}
-// Her kartta: "Hata bildir" → kısa not kutusu → gönder (düzeltme yapılmasa da)
-function bildirKutuHTML(r){return `<div class="bildirkutu" id="bk-${r.id}" hidden><label>Ne yanlış okundu? (isteğe bağlı)</label><textarea rows="2" id="bn-${r.id}" placeholder="Örn. tutar 4.230,00 olmalı"></textarea>
+// Okuma hatası bildirimi: tek kutu. Alan düzeltildiyse kendiliğinden açık durur (not + Gönder tek dokunuş);
+// düzeltme yoksa gizlidir, kartın altındaki "Hata bildir" ile açılır.
+const duzBaslik=r=>{const k=duzeltilen(r),ad=x=>(FIELDS.find(f=>f.k===x)||{}).l||x;
+  return k.length?`${ik('kalem')}Düzelttiğin alanlar: <b>${k.map(x=>esc(ad(x))).join(', ')}</b><div class="hint">Okuyucu bunları yanlış okumuş. Gönderirsen bu makbuz test arşivine eklenir ve aynı hata bir daha tekrarlanmaz.</div>`
+    :`${ik('uyari')}<b>Okuma hatası bildir</b><div class="hint">Yanlış alanı önce yukarıda düzeltirsen doğru değer de bildirime girer.</div>`};
+const duzDurum=r=>r.bildirildi?`<span class="hint">✓ ${new Date(r.bildirildi).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}’de gönderildi</span>`:'';
+function bildirKutuHTML(r){return `<div class="duz bildirkutu" id="bk-${r.id}" ${duzeltilen(r).length?'':'hidden'}><div class="dzb">${duzBaslik(r)}</div>
+  <textarea rows="2" id="bn-${r.id}" placeholder="Not (isteğe bağlı) — örn. tutar 4.230,00 olmalı"></textarea>
   <div class="hint">${S.ghKey?'Makbuz, fotoğrafıyla birlikte doğrudan gizli test gelen kutusuna gönderilir.':'Bildirim dosyası oluşturulur; sohbete gönder. (Ayarlar’a gelen kutusu anahtarı girersen doğrudan gönderilir.)'}</div>
-  <div class="set-row" style="justify-content:flex-end"><button class="btn small" data-bildirac="${r.id}">Vazgeç</button><button class="btn small primary" data-bildir="${r.id}">${ik('paylas')}Gönder</button></div></div>`}
+  <div class="set-row" style="justify-content:flex-end"><span class="dzd">${duzDurum(r)}</span><button class="btn small primary" data-bildir="${r.id}">${ik('paylas')}${r.bildirildi?'Yeniden gönder':'Gönder'}</button></div></div>`}
 async function hataBildir(r,not='',dugme){
   const k=duzeltilen(r);let foto=null,asil=[];try{foto=r.thumb&&r.thumb.startsWith('data:')?r.thumb:await IDB.get('imgs',r.id)}catch(e){}
   // fotoğrafın aslı saklıysa onu da ekle (test arşivi için en değerlisi)
@@ -64,10 +68,9 @@ function render(){
         <div class="checks">${checksHTML(r)}</div>
         <div class="grps">${g}</div>
         ${r.ocr!=null?`<details class="ocr"><summary>Okunan metin (düzeltip yeniden okutabilirsin)</summary><textarea rows="10" data-ocr="${r.id}">${esc(r.ocr)}</textarea><div class="set-row"><button class="btn small" data-copyocr="${r.id}">${ik('kopya')}Kopyala</button><button class="btn small" data-reparse="${r.id}">Metne göre yeniden oku</button></div></details>`:''}
-        ${duzeltmeHTML(r)}
         ${r.akt?`<div class="aktbar">✓ ${aktTarih(r.akt,1)} tarihinde Luca dosyasına aktarıldı. <button class="btn small" data-aktsil="${r.id}">Aktarılmadı yap</button></div>`:''}
         ${bildirKutuHTML(r)}
-        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="lnk bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi · yeniden bildir':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>
+        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="lnk bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>
       </div></div>`;
   }).join('');
   renderSum();
@@ -98,6 +101,7 @@ function refreshCard(r){
   const c=document.getElementById('c_'+r.id);if(!c){renderSum();return}   // süzgeç yüzünden ekranda olmayan kart: baştan çizme (yazılan kutu silinir, klavye kapanır)
   c.querySelector('.head').innerHTML=headHTML(r);
   c.querySelector('.checks').innerHTML=checksHTML(r);
+  {const bk=c.querySelector('.bildirkutu');if(bk){bk.querySelector('.dzb').innerHTML=duzBaslik(r);bk.querySelector('.dzd').innerHTML=duzDurum(r);if(duzeltilen(r).length)bk.hidden=false}}
   c.querySelectorAll('input[data-k]').forEach(i=>{const f=FIELDS.find(x=>x.k===i.dataset.k);if(i!==document.activeElement)i.value=fv(f,r.d[f.k]);i.classList.toggle('unsure',!!(r.unsure&&r.unsure.includes(f.k)));i.classList.toggle('calc',!!(r.auto&&r.auto.includes(f.k)))});
   renderSum();
 }
@@ -109,7 +113,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.devam){devId=t.dataset.devam;const i=$('#devam');i.value='';i.click();return}
   if(t.dataset.f){FLT.f=t.dataset.f;render();return}
   if(t.dataset.aktsil){const r=rows.find(x=>x.id===t.dataset.aktsil);r.akt=null;save(r);render();toast('Bir sonraki Luca dosyasına yeniden girecek');return}
-  if(t.dataset.bildirac){const k=$('#bk-'+t.dataset.bildirac);if(k){k.hidden=!k.hidden;if(!k.hidden)$('#bn-'+t.dataset.bildirac).focus()}return}
+  if(t.dataset.bildirac){const k=$('#bk-'+t.dataset.bildirac);if(k){k.hidden=duzeltilen(rows.find(x=>x.id===t.dataset.bildirac)||{}).length?false:!k.hidden;if(!k.hidden){k.scrollIntoView({behavior:'smooth',block:'center'});$('#bn-'+t.dataset.bildirac).focus({preventScroll:true})}}return}
   if(t.dataset.bildir){const id=t.dataset.bildir,r=rows.find(x=>x.id===id);if(!r)return;const n=$('#bn-'+id);
     hataBildir(r,n?n.value.trim():'',t).then(ok=>{if(ok){render()}});return}
   if(t.dataset.recam||t.dataset.regal){reId=t.dataset.recam||t.dataset.regal;const i=$(t.dataset.recam?'#recam':'#regal');i.value='';i.click();return}
