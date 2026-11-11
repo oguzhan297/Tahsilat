@@ -12,9 +12,10 @@
   const r2 = n => Math.round(n * 100) / 100;
 
   // ---- Tutarlar ----
-  // "4.700,00" "745,17" | "4,230" "5.700" (binlik) | "0.00" "1670.00" | "14700"
-  const AMT = /(?<![\d.,])(?:\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2}|\d{1,3}(?:[.,]\d{3})+|\d+\.\d{2}|\d{2,7})(?![\d]|[.,]\d)/g;
+  // "4.700,00" "745,17" | "2,070.00" "3.380.78" (kuruş noktayla) | "4,230" "5.700" (binlik) | "0.00" "1670.00" | "14700"
+  const AMT = /(?<![\d.,])(?:\d{1,3}(?:[.,]\d{3})+\.\d{2}|\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2}|\d{1,3}(?:[.,]\d{3})+|\d+\.\d{2}|\d{2,7})(?![\d]|[.,]\d)/g;
   function amtVal(t) {
+    if (/^\d{1,3}([.,]\d{3})+\.\d{2}$/.test(t)) return +t.replace(/[.,](?=\d{3})/g, '');   // 2,070.00 → 2070.00
     if (/^\d{1,3}(\.\d{3})+,\d{2}$/.test(t)) return +t.replace(/\./g, '').replace(',', '.');
     if (/^\d+,\d{2}$/.test(t)) return +t.replace(',', '.');
     if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return +t.replace(/[.,]/g, '');
@@ -101,7 +102,8 @@
   }
   function firmaBul(lines, F, pos) {
     if (pos) { for (const l of lines) { const t = firmaTemiz(l); if (t.length >= 4 && /[A-ZÇĞİÖŞÜ]{3}/.test(t)) return t; } return ''; }
-    const musteri = i => /^(SAYIN|SN\s?[:.]|MUSTER[I1])/.test(F[i]) || (i > 0 && /MUSTER[I1]\b.*\bID\b|^(SAYIN|SN)\s?[:.,]?\s*$/.test(F[i - 1]));
+    const musteri = i => /^(SAYIN|SN\s?[:.]|MUSTER[I1])/.test(F[i]) || (i > 0 && /MUSTER[I1]\b.*\b(ID|KOD)|^(SAYIN|SN)\s?[:.,]?\s*$/.test(F[i - 1]));
+    for (let i = 0; i < lines.length; i++) { const m = F[i].match(/^UNVAN[I1]?\s?[:.]\s*(.{4,})$/); if (m && !musteri(i)) return firmaKisalt(lines[i].slice(lines[i].length - m[1].length).replace(/[-–]\s*$/, '').trim()); }
     for (let i = 0; i < lines.length; i++) {
       if (!FIRMA_SOZ.test(F[i]) || musteri(i)) continue;
       if (/BANKA|[I1]BAN|VERG[I1]\sDA[I1]RES[I1]|\bV\.?D\b\s?[:.]|\bMAH\b|\bCAD\b|\bSK\b|MERS[I1]S/.test(F[i]) && !/LTD|STI/.test(F[i])) continue;   // adres / banka satırı
@@ -119,10 +121,10 @@
 
   // ---- Evrak no ----
   function evrakBul(lines, F, pos) {
-    const tok = s => { const m = String(s).trim().match(/^[:.\s]*([A-Z0-9][A-Z0-9\-\/]{2,})/); return m && /\d{3}/.test(m[1]) ? m[1] : null; };
+    const tok = (s, kisa) => { const m = String(s).trim().match(kisa ? /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]*)/ : /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]{2,})/); return m && (kisa ? /\d/ : /\d{3}/).test(m[1]) ? m[1] : null; };
     const diger = [];
     // 1) "Evrak No: T59-2026000804", "Makbuz No: 123"
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKBUZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1]); if (t) return { v: t, diger }; } }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKBUZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1], true); if (t) return { v: t, diger }; } }
     // 2) "MAKBUZ NO" sütunu: alt satırlardaki 6-10 haneli numaralar
     for (let i = 0; i < F.length; i++) if (/MAKBUZ\s?NO/.test(F[i])) {
       const ns = []; for (let j = i + 1; j < Math.min(F.length, i + 12); j++) { if (/TOPLAM|YALN[I1]Z/.test(F[j])) break; const m = F[j].match(/(?<!\d)(\d{6,10})(?!\d)(?:\s\d)?\s*$/); if (m) ns.push(m[1]); }
@@ -140,13 +142,13 @@
   }
 
   // ---- Ana ayrıştırıcı ----
-  const BAKIYE = /BAK[I1]YE|KALAN|BORC|BAK[I1]YES[I1]|ALACAK/;
+  const BAKIYE = /BAK[I1][YV]E|KALAN|BORC|ALACAK/;
   const K = {
     nakit: /\bNAK[I1]T\b/,
     kart: /\bPOS\b|KRED[I1]\s?KART[I1]?|\bK\.?\s?KART[I1]\b|\bV[I1]SA\b|\bKART\s?[I1]LE\b/,
     cek: /\bCEK\b/,
     diger: /\bHAVALE\b|\bEFT\b|\bSENET\b/,
-    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R/
+    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R|\bTUTAR\b|L[I1]RAS[I1]\b/
   };
   function parse(text) {
     const lines = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && !/^—— \d+\. okuma ——$/.test(l));
@@ -206,6 +208,11 @@
       const m = F[i].match(/YALN[I1]Z\s?[:.,]?\s*(.+)$/) || F[i].match(/YAZ[I1]YLA\s?[:.,]?\s*(.+)$/); if (!m) continue;
       const v = yaziyla(m[1].replace(/TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R.*$/, '').replace(/\.{2,}/g, ' '));
       if (v != null && v > 0) { d.yazi = v; notes.push('Yazıyla: ' + lines[i].slice(F[i].search(/YALN[I1]Z|YAZ[I1]YLA/)).replace(/^[^:.,\s]+\s?[:.,]?\s*/, '').trim()); break; }
+    }
+
+    if (d.yazi == null) for (let i = 0; i < lines.length; i++) {
+      if (/\d/.test(lines[i]) || !/B[I1]N|YUZ/.test(F[i])) continue;
+      const v = yaziyla(lines[i]); if (v != null && v >= 10) { d.yazi = v; notes.push('Yazıyla: ' + lines[i]); break; }
     }
 
     // ---- emin olunamayan alanlar ----
@@ -270,5 +277,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 2, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 3, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);
