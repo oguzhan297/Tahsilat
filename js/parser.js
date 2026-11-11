@@ -25,7 +25,7 @@
   }
   // Tutar aranacak parçayı temizle: işaretler, para birimi, el yazısında ".00" yerine okunan harfler
   function amtClean(s) {
-    return s.replace(/(\d)-(\d{2})(?!\d)/g, '$1,$2').replace(/(\d)([.,])(\d)[)\]}](?!\d)/g, '$1$2$30')
+    return s.replace(/(?<=\d[.,]?\d*)[SOo](?=[.,]?\d|[.,]\d)/g, c => c === 'S' ? '5' : '0').replace(/(\d)-(\d{2})(?!\d)/g, '$1,$2').replace(/(\d)([.,])(\d)[)\]}](?!\d)/g, '$1$2$30')
       .replace(/[|#*=≠₺€$«»"'“”]/g, ' ').replace(/(\d)\.(?:[CEOQ]{2}|[CEOQ]0|0[CEOQ])(?![A-Z0-9])/gi, '$1.00')
       .replace(/(\d)\s?[-–—]+(?=\s|$)/g, '$1 ').replace(/\bTL\b\.?/gi, ' ');
   }
@@ -160,7 +160,7 @@
     const d = { firma: '', tarih: '', evrak_no: '', toplam: null, cek: null, kart: null, nakit: null, diger: null, yazi: null };
     const unsure = [], notes = [], cnt = {};
     const pos = /ONAY\sKODU|KART\sHAM[I1]L[I1]|[I1]SYER[I1]\sNO|\bTERM\.?\s?NO/.test(all);
-    const cekTablo = F.some(l => /BANKA/.test(l) && /(CEK\s?NO|HESAP\s?NO|[I1]BAN|NUMARASI)/.test(l) && /(VADE|V\.\s?TAR[I1]H|TAR[I1]H[I1])/.test(l)) || /TAHS[I1]L\s?SARTI\s?[I1]LE/.test(all);
+    const cekTablo = F.some(l => /BANKA/.test(l) && /(CEK\s?NO|HESAP\s?NO|[I1]BAN|NUMARASI)/.test(l) && /(VADE|V\.\s?TAR[I1]H|TAR[I1]H[I1]?)/.test(l)) || /TAHS[I1]L\s?SARTI\s?[I1]LE/.test(all);
     const el = !pos && (cekTablo || (/\bSAY[I1]N\b/.test(all) && /(YAZ[I1]YLA|TAHS[I1]L\s?EDEN|ODEYEN)/.test(all)));
 
     d.firma = firmaBul(lines, F, pos);
@@ -169,6 +169,7 @@
     if (ev.diger.length) notes.push('Diğer makbuz no: ' + ev.diger.join(', '));
 
     // tutarlar
+    let zayifTop = false;
     const ekle = (k, v) => { d[k] = r2((d[k] || 0) + v); };
     const gor = v => { const c = Math.round(v * 100); cnt[c] = (cnt[c] || 0) + 1; };
     if (pos) {
@@ -197,6 +198,12 @@
       }
       // başlık satırının altındaki tutarlar: sonuncusu TOPLAM (başlıkta varsa), öncekiler ödeme — hangi sütun olduğu metinden
       // anlaşılmaz; tek tutar varsa ya da hepsi aynıysa toplam kabul edilir (ödeme türü kontrol ekranında nakit varsayılır)
+      for (const l of lines) { const m = l.match(/#\s?([\d.,]+)\s?[#=-]/); if (m) { const a = amounts(m[1]); if (a.length && a[0] > 0) { topAday.push(a[0]); gor(a[0]); if (d.toplam == null) d.toplam = a[0]; } } }
+      // başlıkta TUTAR(I) var ama tutar yok: alt satırdaki tek tutar toplam adayıdır (zayıf — her zaman kontrol edilir)
+      if (d.toplam == null && d.nakit == null && d.kart == null && d.cek == null) for (let i = 0; i + 1 < lines.length; i++) {
+        if (!/\bTUTAR[I1]?\b/.test(F[i]) || amounts(lines[i]).length || BAKIYE.test(F[i + 1])) continue;
+        const a = amounts(lines[i + 1]).filter(v => v > 0); if (a.length === 1) { d.toplam = a[0]; zayifTop = true; break; }
+      }
       { const p = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), fark = [...new Set(topAday.filter(v => v > 0))];
         if (fark.length > 1) { const es = fark.find(v => Math.abs(v - p) < 0.005); if (es != null) d.toplam = es; notes.push('Birden çok TOPLAM okundu: ' + fark.join(' / ')); } }
       for (const tb of tablo) {
@@ -227,13 +234,14 @@
     const top = d.toplam != null ? d.toplam : (pay > 0 ? r2(pay) : null);
     if (!d.tarih || !t.kesin || el) unsure.push('tarih');
     if (!d.evrak_no || ev.zayif) unsure.push('evrak_no');
+    if (zayifTop) unsure.push('toplam');
     if (top == null) unsure.push('toplam', 'nakit');   // tutar hiç okunamadı: toplam da ödeme de boş
-    else if (d.toplam != null && pay > 0 && Math.abs(pay - d.toplam) > 0.005) unsure.push('toplam', ...['nakit', 'kart', 'cek'].filter(k => d[k] != null));
+    else if (d.toplam != null && pay > 0 && Math.abs(pay - d.toplam) > 0.005) { unsure.push('toplam', ...['nakit', 'kart', 'cek'].filter(k => d[k] != null)); notes.push(`Toplam (${d.toplam}) ile ödeme (${r2(pay)}) farklı okundu`); }
     else if (d.yazi != null && Math.abs(d.yazi - top) > 0.005) unsure.push('toplam');
     else if (el) {
       // el yazısı: tutar makbuzda en az iki yerde aynı okunmadıysa (ya da yazıyla tutarla doğrulanmadıysa) işaretle
       const kez = cnt[Math.round(top * 100)] || 0, yaziOk = d.yazi != null && Math.abs(d.yazi - top) < 0.005;
-      if (kez < 2 && !yaziOk) unsure.push(d.toplam != null ? 'toplam' : (['nakit', 'kart', 'cek'].find(k => d[k] != null) || 'toplam'));
+      if (kez < 2 && !yaziOk) unsure.push('toplam', ...['nakit', 'kart', 'cek'].filter(k => d[k] != null));
     }
     if (!d.firma) unsure.push('firma');
     const found = (d.firma ? 1 : 0) + (d.tarih ? 1 : 0) + (d.evrak_no ? 1 : 0) + (top != null ? 1 : 0);
@@ -284,5 +292,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 7, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 8, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);

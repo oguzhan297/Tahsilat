@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=7;
+const APP_VER=8;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  8:['Deklanşör basıldığı anda çeker; çekim sırasında uygulama artık kendini yenilemez (kamera açıkken okuma bekler, daha az bellek)','Gönderdiğin makbuzlardaki 16 firmanın adı senin yazdığın şekilde kendiliğinden gelir','El yazısı tutarlarda okunan ile toplam çelişirse ikisi de turuncu işaretlenir'],
   7:['Firma, makbuzdaki basılı telefon numarasından da tanınır: logodaki adı okunamayan firmanın adını bir kez yazarsan sonraki makbuzlarında kendiliğinden gelir (Has Gülay tanımlı)'],
   6:['Logodaki firma adı okunamayınca “PAZ” gibi anlamsız ad yazılmaz; firma boş gelir'],
   5:['Bir alanı düzeltince bildirim kutusu kartta kendiliğinden açılır: isteğe bağlı not yaz, tek dokunuşla Gönder'],
@@ -61,12 +62,20 @@ let FIRMA={},FIRMA_TEL={};
 try{FIRMA=JSON.parse(localStorage.getItem('th_firma')||'{}')||{}}catch(e){}
 try{FIRMA_TEL=JSON.parse(localStorage.getItem('th_firma_tel')||'{}')||{}}catch(e){}
 // Önceden bilinenler (kullanıcının bildirimlerinden): telefon → firma
-const FIRMA_TEL0={'0378268095':'HAS GÜLAY GIDA VE TEMİZLİK MADDELERİ'};
+const FIRMA_TEL0={"03722664400":"Avcılar tekstil turizm gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret limited şirketi","03722661053":"Avcılar tekstil turizm gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret limited şirketi","03722664181":"Melih bilgin","03722100060":"Melih bilgin","03722536014":"Seda gıda iş makinaları mühendislik inşaat petrol ürünleri doğalgaz sanayi ve ticaret ltd.şti.","03724000261":"Yenigün ihtiyaç maddeleri gıda tarım ve hayvancılık turizm inşaat sanayi ticaret limited şirketi","03782681095":"Hasgülay gıda ve temizlik maddeleri pazarlama dağıtım ticaret ve sanayi limited şirketi","05355188779":"Sinan üstüntaş","03742180014":"Bolu er gıda hayvancılık nakliye sanayi ve ticaret limited şirketi","03722683886":"İs ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi","03722561053":"Avcılar tekstil turizm gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret limited şirketi","0378268095":"Hasgülay gıda ve temizlik maddeleri pazarlama dağıtım ticaret ve sanayi limited şirketi"};
+const FIRMA0={"AVCILARGIDATEKSTIL":"Avcılar tekstil turizm gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret limited şirketi","SEDAGIDA":"Seda gıda iş makinaları mühendislik inşaat petrol ürünleri doğalgaz sanayi ve ticaret ltd.şti.","IHT":"Yenigün ihtiyaç maddeleri gıda tarım ve hayvancılık turizm inşaat sanayi ticaret limited şirketi","INT":"Yenigün ihtiyaç maddeleri gıda tarım ve hayvancılık turizm inşaat sanayi ticaret limited şirketi","SİNANÜSTÜNTAŞMÜSTERLTOPTANGIDAVETEMİZLİK":"Sinan üstüntaş","UGTOPTANGIDAVETEMİZLİK":"Sinan üstüntaş","ERHAYV":"Bolu er gıda hayvancılık nakliye sanayi ve ticaret limited şirketi","GIDAVEIHTIYAÇ":"İs ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi","AVCILARGIDATEKSTILAVCILAR":"Avcılar tekstil turizm gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret limited şirketi","UZAYTICARET":"Mf uzay ticaret toptan satış san. tic. ltd. şti.","GÜNESIBRAHIMMUHAMMETYUSUFAYDOG":"Güneş ibrahim aydoğan muhammet aydoğan yusuf aydoğan kollektif şirketi","GÜNEŞIBRAHIMMUHAMMETYUSUFAYDO":"Güneş ibrahim aydoğan muhammet aydoğan yusuf aydoğan kollektif şirketi","GÜNEIBRAHİMMUHAMMETYUSUFAYDO":"Güneş ibrahim aydoğan muhammet aydoğan yusuf aydoğan kollektif şirketi","GUNESIBRAHIMAYDOGANMUHAMMETAYDOGANY":"Güneş ibrahim aydoğan muhammet aydoğan yusuf aydoğan kollektif şirketi","GULAY":"Hasgülay gıda ve temizlik maddeleri pazarlama dağıtım ticaret ve sanayi limited şirketi","SİNANÜSTÜNTASTOPTANGIDAVETEMİZLİK":"Sinan üstüntaş","SUGTOPTANGIDAVETEMİZLİK":"Sinan üstüntaş"};
 // Satırlarda "Tel/GSM/Fax" geçen numaralar (yalnız rakamlar, en az 9 hane). Müşterinin vergi no'su vb. karışmasın diye yalnız telefon.
 function telNolar(text){const out=new Set();for(const l of String(text||'').split(/\n/)){if(!/\b(TEL|GSM|FAX|TELEFON)\b/i.test(l))continue;
-  for(const m of l.replace(/(?<=\d)[\s.()\-\/]+(?=\d)/g,'').matchAll(/\d{9,11}/g))out.add(m[0].replace(/^90(?=\d{10}$)/,'').replace(/^(?=[1-9]\d{9}$)/,'0'))}
+  for(const m of l.replace(/(?<=\d)[\s.()\-\/]+(?=\d)/g,'').matchAll(/\d{9,11}/g)){const n=m[0].replace(/^90(?=\d{10}$)/,'').replace(/^(?=[2-5]\d{9}$)/,'0');if(/^0[2-5]\d{8,9}$/.test(n))out.add(n)}}   // yalnız telefon biçimi (tarih, vergi no değil)
   return [...out]}
-function firmaAd(okunan,text){for(const t of telNolar(text)){const v=FIRMA_TEL[t]||FIRMA_TEL0[t];if(v)return v}return FIRMA[nkey(okunan)]||okunan}
+// Okuyucu bir rakamı atlayabilir ya da fazla okuyabilir ("268 0 95" / "268 10 95"): tek hane farkı da eşleşir
+function birFark(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1||Math.min(a.length,b.length)<10)return false;let i=0,j=0,f=0;
+  while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++f>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++}}
+  return f+(a.length-i)+(b.length-j)<=1}
+function firmaAd(okunan,text){const tel=telNolar(text);
+  for(const T of [FIRMA_TEL,FIRMA_TEL0])for(const t of tel){if(T[t])return T[t]}
+  for(const T of [FIRMA_TEL,FIRMA_TEL0])for(const t of tel)for(const k in T)if(birFark(t,k))return T[k];
+  return FIRMA[nkey(okunan)]||FIRMA0[nkey(okunan)]||okunan}
 function firmaOgren(okunan,dogru,text){if(!dogru)return false;let ok=false;
   if(okunan&&nkey(okunan)!==nkey(dogru)){FIRMA[nkey(okunan)]=dogru;ok=true}
   for(const t of telNolar(text)){FIRMA_TEL[t]=dogru;ok=true}
