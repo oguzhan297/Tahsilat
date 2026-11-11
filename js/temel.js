@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=18;
+const APP_VER=19;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  19:['Yeni “Firmalar” ekranı (ana ekrandaki düğme): uygulamanın tanıdığı firmaları görebilir, adını düzeltebilir, iki firmayı birleştirebilir, telefon ekleyip yanlış öğrenilmiş telefon ya da yazılışı silebilirsin. Ad değişince Luca’ya aktarılmamış makbuzlar da güncellenir.','Öğrenilen firmalar artık yedeğe de giriyor; yedekten yükleyince geri gelir.'],
   18:['Toplam ile nakit (tek ödeme türü) artık hep aynı: biri değişince öteki de değişir; okumada biri eksik okunduysa (62,25 ↔ 3.062,25 · 200 ↔ 6.200) büyüğü alınır','Eksik alanlarda firma da var: bilinen firmalardan seçebilirsin','6 aydan eski tarihte uyarı (yıl yanlış okunmuş olabilir)','Yeniden çekilen fotoğrafta eski kırpma görüntüleri kalmaz; yedekten yükleme tüm bilgileri geri getirir'],
   17:['Fotoğrafa dokununca tam ekran görüntüleyici: iki parmakla yakınlaştır, kaydır, çift dokun. Eksik alanlardaki küçük görüntüye dokununca o bölge büyütülmüş açılır','Eksik alanlardaki görüntüler daha geniş bölge gösterir','Bir-iki harfi yanlış okunan firma adı da tanınır; Ebru Avcı → “Ebru avcı”'],
   16:['El yazısı makbuzlarda “Eksik alanlar”: turuncu tarih / evrak no / tutar kartın en üstünde, yanında makbuzun o kısmı büyütülmüş','Kısa yazım: 2310 → 23.10.2026; dokununca okunan değer seçili gelir, “ileri” sonraki alana geçer','Telefon numarasından tanınan firma artık şüpheli sayılmaz'],
@@ -84,8 +85,15 @@ function telNolar(text){const out=new Set();for(const l of String(text||'').spli
 // Okuyucu bir rakamı atlayabilir ya da fazla okuyabilir ("268 0 95" / "268 10 95"): tek hane farkı da eşleşir
 // Kullanıcının sonradan düzelttiği firma yazımları: eski yazım → doğru yazım (öğrenilmiş adlarda ve kartlarda da değişir)
 const FIRMA_YENIAD={'İs ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi':'is ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi'};
+// Firmalar ekranında hazır tanımlara yapılan değişiklikler: n/t = yeni ad (yazılış / telefon), sil = kaldırılanlar ('n:ANAHTAR' / 't:telefon')
+let FIRMA_EK={n:{},t:{},sil:[]};
+try{FIRMA_EK=Object.assign(FIRMA_EK,JSON.parse(localStorage.getItem('th_firma_ek')||'{}')||{})}catch(e){}
+function firmaEkUygula(){for(const k in FIRMA_EK.n)if(k in FIRMA0)FIRMA0[k]=FIRMA_EK.n[k];for(const k in FIRMA_EK.t)if(k in FIRMA_TEL0)FIRMA_TEL0[k]=FIRMA_EK.t[k];
+  for(const x of FIRMA_EK.sil){const k=x.slice(2);if(x[0]==='n')delete FIRMA0[k];else delete FIRMA_TEL0[k]}}
+firmaEkUygula();
+function firmaKaydet(){try{localStorage.setItem('th_firma',JSON.stringify(FIRMA));localStorage.setItem('th_firma_tel',JSON.stringify(FIRMA_TEL));localStorage.setItem('th_firma_ek',JSON.stringify(FIRMA_EK))}catch(e){}}
 {let d=false;for(const T of [FIRMA,FIRMA_TEL])for(const k in T)if(FIRMA_YENIAD[T[k]]){T[k]=FIRMA_YENIAD[T[k]];d=true}
-  if(d)try{localStorage.setItem('th_firma',JSON.stringify(FIRMA));localStorage.setItem('th_firma_tel',JSON.stringify(FIRMA_TEL))}catch(e){}}
+  if(d)firmaKaydet()}
 function birFark(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1||Math.min(a.length,b.length)<10)return false;let i=0,j=0,f=0;
   while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++f>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++}}
   return f+(a.length-i)+(b.length-j)<=1}
@@ -114,7 +122,7 @@ function firmaAd(okunan,text){const tel=telNolar(text);
 function firmaOgren(okunan,dogru,text){if(!dogru)return false;let ok=false;
   if(okunan&&nkey(okunan)!==nkey(dogru)){FIRMA[nkey(okunan)]=dogru;ok=true}
   for(const t of telNolar(text)){FIRMA_TEL[t]=dogru;ok=true}
-  try{localStorage.setItem('th_firma',JSON.stringify(FIRMA));localStorage.setItem('th_firma_tel',JSON.stringify(FIRMA_TEL))}catch(e){}
+  firmaKaydet()
   return ok}
 // Evrak no: 6 haneden uzunsa yalnız son 6 karakter (harf/rakam; tire, boşluk sayılmaz). "F3528102026017" → "026017"
 function evrakKisa(v){const s=String(v??'').trim();const a=s.replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]/g,'');return a.length>6?a.slice(-6):s}

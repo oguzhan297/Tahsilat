@@ -342,3 +342,26 @@ ul.yenilik{margin:10px 0 14px;padding-left:20px;color:#cbd5e1;font-size:14px;lin
 .gv-ipucu{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;color:#cbd5e1;font-size:12.5px;text-shadow:0 1px 2px #000;pointer-events:none}
 body.gv-acik{overflow:hidden}
 .hz-k{cursor:zoom-in}
+
+/* Firmalar ekranı */
+.fm-box{max-height:88vh;max-height:88dvh;overflow:hidden}
+.fm-ust{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fm-ust .hint{font-weight:500;font-size:13px;margin-left:4px}
+.fm-box input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line2);border-radius:12px;background:rgba(2,6,23,.38);color:var(--ink)}
+.fm-box input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.22)}
+.fm-yeni{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--line2);border-radius:12px}
+.fm-yeni[hidden]{display:none}
+.fm-yeni .btn{align-self:flex-end}
+.fm-liste{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:0 4px 4px;min-height:80px}
+.fm-f{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
+.fm-f.ac{border-color:rgba(59,130,246,.5);background:rgba(59,130,246,.06)}
+.fm-bas{appearance:none;border:0;background:none;color:inherit;font:inherit;width:100%;text-align:left;padding:10px 12px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.fm-ad{font-weight:600;font-size:14.5px;line-height:1.3;overflow-wrap:anywhere}
+.fm-oz{font-size:12.5px;color:var(--mut)}
+.fm-ic{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.fm-l{font-size:12.5px;font-weight:600;margin-top:4px}
+.fm-l span{font-weight:400;color:var(--mut)}
+.fm-cip{display:flex;flex-wrap:wrap;gap:6px}
+.fm-c{display:inline-flex;align-items:center;gap:2px;font-size:12.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;border:1px solid var(--line2);border-radius:99px;padding:3px 4px 3px 10px;max-width:100%;overflow-wrap:anywhere}
+.fm-c button{appearance:none;border:0;background:none;color:var(--mut);font-size:17px;line-height:1;width:26px;height:26px;border-radius:99px;cursor:pointer;flex:none}
+.fm-c button:active{background:rgba(239,68,68,.2);color:#fca5a5}

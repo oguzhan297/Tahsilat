@@ -36,6 +36,8 @@ async function load(){
       if(!d.aciklama||d.aciklama===r._ack||d.aciklama===d.firma){d.aciklama=d.aciklama===d.firma&&d.aciklama!==r._ack?y:(d.firma=y,mkAck(d));r._ack=d.aciklama}d.firma=y;if(r.oku&&FIRMA_YENIAD[r.oku.firma])r.oku.firma=y;save(r)}
     for(const r of rows){const d=r.d||{};if(r.akt||!r.oku||d.firma!==r.oku.firma)continue;
       const yeni=firmaAd(r.okuFirma||d.firma,r.ocr);if(!yeni||yeni===d.firma)continue;
+      // tanınan firma yoksa (ör. Firmalar'dan silindi) yalnız Türkçe harf düzeltmesi yapılır; ad başka bir şeye dönmez
+      const sade=x=>TParse.fold(x).replace(/[^0-9A-Z]/g,'');if(yeni===trFirma(r.okuFirma||d.firma)&&sade(yeni)!==sade(d.firma))continue;
       const ack=!d.aciklama||d.aciklama===r._ack;d.firma=yeni;r.oku.firma=yeni;if(ack){d.aciklama=mkAck(d);r._ack=d.aciklama}save(r)}
     setStore('ok')}
   catch(e){setStore('err');notice('Bu tarayıcı veri saklamaya izin vermiyor (gizli sekme olabilir). Makbuzlar kaydedilmez; CSV’yi indirmeyi unutma.')}
@@ -45,7 +47,7 @@ async function load(){
 // ---- Yedek ----
 $('#bk').onclick=async()=>{
   const out=[];for(const r of rows.filter(x=>x.status==='done')){let img=null;if(r.hasImg){try{img=await IDB.get('imgs',r.id)}catch(e){}}out.push({id:r.id,...ser(r),img})}
-  const d=new Date();offer(`Tahsilat_Yedek_${d.toISOString().slice(0,10)}.json`,JSON.stringify({app:'tahsilat',v:1,rows:out}));
+  const d=new Date();offer(`Tahsilat_Yedek_${d.toISOString().slice(0,10)}.json`,JSON.stringify({app:'tahsilat',v:1,rows:out,firmalar:{ad:FIRMA,tel:FIRMA_TEL,ek:FIRMA_EK}}));
 };
 $('#bkin').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
@@ -53,6 +55,12 @@ $('#bkin').addEventListener('change',async e=>{
     let n=0;for(const x of j.rows){if(!x||!x.id||!x.d)continue;if(rows.some(r=>r.id===x.id))continue;
       const {img,...y}=x;const r={...y,id:String(x.id),status:'done',open:false,unsure:x.unsure||[],auto:x.auto||[],created:x.created||Date.now(),hasImg:false,hasOrig:false};
       rows.push(r);save(r);if(x.img)await saveImg(r,x.img);n++}
-    sortRows();render();toast(n?`${n} makbuz yedekten yüklendi`:'Yedekteki makbuzlar zaten listede');
+    // öğrenilen firmalar: telefondakiler korunur, yedekte olup burada olmayanlar eklenir
+    let fn=0;const F=j.firmalar;if(F&&typeof F==='object'){
+      for(const [K,T] of [[F.ad,FIRMA],[F.tel,FIRMA_TEL]])if(K&&typeof K==='object')for(const k in K)if(!(k in T)&&typeof K[k]==='string'){T[k]=K[k];fn++}
+      const E=F.ek;if(E&&typeof E==='object'){for(const x of ['n','t'])if(E[x])for(const k in E[x])if(!(k in FIRMA_EK[x])){FIRMA_EK[x][k]=E[x][k];fn++}
+        if(Array.isArray(E.sil))for(const x of E.sil)if(!FIRMA_EK.sil.includes(x)){FIRMA_EK.sil.push(x);fn++}firmaEkUygula()}
+      if(fn)firmaKaydet()}
+    sortRows();render();toast((n?`${n} makbuz yedekten yüklendi`:'Yedekteki makbuzlar zaten listede')+(fn?' · firma bilgileri eklendi':''));
   }catch(err){toast('Bu dosya geçerli bir yedek değil.')}
 });

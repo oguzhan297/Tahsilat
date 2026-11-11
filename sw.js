@@ -1,10 +1,10 @@
 // Uygulamayı internetsiz de açılabilir yapar. Sürüm değişince eski önbellek silinir.
-const V='tahsilat-v18';
+const V='tahsilat-v19';
 // PaddleOCR (paddle.js, ONNX Runtime, modeller) büyük dosyalar: ayrı önbellekte durur, uygulama sürümü değişince silinmez.
 // Önbellek adı Z Raporu uygulamasıyla ortak (aynı adres: oguzhan297.github.io) → modeller iki uygulama için bir kez iner.
 const OCR='zrapor-ocr-1';
 const isOcr=u=>u.hostname==='paddle-model-ecology.bj.bcebos.com'||(u.hostname==='cdn.jsdelivr.net'&&u.pathname.startsWith('/npm/onnxruntime-web@'))||(u.origin===self.location.origin&&u.pathname.endsWith('/paddle.js'));
-const SHELL=['./','./index.html','./css/uygulama.css?v=18','./js/parser.js?v=18','./js/goruntu.js?v=18','./js/paddle-worker.js?v=18','./js/temel.js?v=18','./js/depo.js?v=18','./js/ayarlar.js?v=18','./js/kontrol.js?v=18','./js/kalite.js?v=18','./js/arayuz.js?v=18','./js/okuyucu-claude.js?v=18','./js/okuyucu-tesseract.js?v=18','./js/okuyucu-paddle.js?v=18','./js/okuma.js?v=18','./js/disari.js?v=18','./js/baslat.js?v=18','./ikon.svg?v=18','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
+const SHELL=['./','./index.html','./css/uygulama.css?v=19','./js/parser.js?v=19','./js/goruntu.js?v=19','./js/paddle-worker.js?v=19','./js/temel.js?v=19','./js/depo.js?v=19','./js/ayarlar.js?v=19','./js/kontrol.js?v=19','./js/kalite.js?v=19','./js/arayuz.js?v=19','./js/okuyucu-claude.js?v=19','./js/okuyucu-tesseract.js?v=19','./js/okuyucu-paddle.js?v=19','./js/okuma.js?v=19','./js/disari.js?v=19','./js/firmalar.js?v=19','./js/baslat.js?v=19','./ikon.svg?v=19','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 // cache:'reload' → tarayıcının kendi önbelleğindeki eski kopyayı değil, sunucudaki güncel dosyayı al
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,u.startsWith('http')?{mode:'no-cors'}:{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()))});

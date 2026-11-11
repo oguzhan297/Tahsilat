@@ -9,16 +9,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="ikon.svg?v=18" type="image/svg+xml">
+<link rel="icon" href="ikon.svg?v=19" type="image/svg+xml">
 <link rel="alternate icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tahsilat">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="js/parser.js?v=18"></script>
-<script src="js/goruntu.js?v=18"></script>
-<link rel="stylesheet" href="css/uygulama.css?v=18">
+<script src="js/parser.js?v=19"></script>
+<script src="js/goruntu.js?v=19"></script>
+<link rel="stylesheet" href="css/uygulama.css?v=19">
 </head>
 <body>
 <!-- İkonlar (SF Symbols tarzı çizgi ikonlar, 24×24). Kullanım: <svg class="ik"><use href="#i-kamera"/></svg> -->
@@ -27,6 +27,7 @@
 <symbol id="i-foto" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m20.5 15.5-4.6-4.6a1.2 1.2 0 0 0-1.7 0L6.5 19"/></symbol>
 <symbol id="i-seri" viewBox="0 0 24 24"><path d="M4 8V6.5A2.5 2.5 0 0 1 6.5 4H8M16 4h1.5A2.5 2.5 0 0 1 20 6.5V8M20 16v1.5a2.5 2.5 0 0 1-2.5 2.5H16M8 20H6.5A2.5 2.5 0 0 1 4 17.5V16"/><rect x="8.5" y="7.5" width="7" height="9" rx="1.2"/><path d="M10.5 10.5h3M10.5 13h3"/></symbol>
 <symbol id="i-metin" viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z"/><path d="M13.5 3.5V8h4.5M8.5 12h7M8.5 15h7M8.5 18h4"/></symbol>
+<symbol id="i-firma" viewBox="0 0 24 24"><path d="M4 20.5V6l7-2.5v17M11 8.5l9 3v9M2.5 20.5h19M7 9h1M7 12.5h1M7 16h1M14.5 14h2M14.5 17h2"/></symbol>
 <symbol id="i-arti" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-kopya" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
 <symbol id="i-indir" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 15.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5"/></symbol>
@@ -41,7 +42,7 @@
 <symbol id="i-pano" viewBox="0 0 24 24"><rect x="5.5" y="5" width="13" height="16" rx="2"/><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M12 10v6M9.5 13.5 12 16l2.5-2.5"/></symbol>
 </defs></svg>
 <div class="wrap">
-  <div class="brand"><img class="logo" src="ikon.svg?v=18" alt=""><div><h1>Tahsilat <span class="to">→</span> Luca</h1><div class="tag">Makbuz tara · kontrol et · Luca’ya aktar</div></div></div>
+  <div class="brand"><img class="logo" src="ikon.svg?v=19" alt=""><div><h1>Tahsilat <span class="to">→</span> Luca</h1><div class="tag">Makbuz tara · kontrol et · Luca’ya aktar</div></div></div>
   <p class="sub">Tahsilat makbuzunun ya da POS slipinin fotoğrafını çek; firma, tarih, evrak no, toplam, nakit, kredi kartı ve çek otomatik okunur. El yazısı makbuzlarda okunamayan alanlar turuncu gelir. Kontrol et, sonra Luca şablonundaki CSV olarak indir.</p>
 
   <div class="sync s-wait" id="sync">Bağlanıyor…</div>
@@ -62,6 +63,7 @@
   <div class="row-links">
     <button class="btn small" id="paste"><svg class="ik"><use href="#i-metin"/></svg>Metinden ekle</button>
     <button class="btn small" id="manual"><svg class="ik"><use href="#i-arti"/></svg>Elle ekle</button>
+    <button class="btn small" id="firmalarac" type="button"><svg class="ik"><use href="#i-firma"/></svg>Firmalar</button>
     <button class="btn small" id="copy"><svg class="ik"><use href="#i-kopya"/></svg>Tabloyu kopyala</button>
     <button class="btn small danger" id="clear">Tümünü sil</button>
   </div>
@@ -114,6 +116,13 @@
   <div class="k-flas" id="kflas"></div>
 </div>
 <div class="guncel" id="guncel" hidden><span id="guncelyazi">Yeni sürüm hazır</span><button class="btn small primary" id="guncelbtn" type="button">Yenile</button></div>
+<div class="modal" id="firmalar" hidden><div class="mbox fm-box">
+  <div class="fm-ust"><div class="mt">Firmalar <span class="hint" id="fmsay"></span></div><button class="btn small" id="fmkapat" type="button">Kapat</button></div>
+  <div class="hint">Uygulama firmayı makbuzdaki basılı telefondan ya da okunan addan tanır. Buradan adı düzeltebilir, iki firmayı birleştirebilir, yanlış öğrenilmiş telefonu ya da yazılışı silebilirsin. Ad değişince Luca'ya aktarılmamış makbuzlar da güncellenir.</div>
+  <div class="keyrow"><input id="fmara" type="search" placeholder="Firma adı ya da telefon ara" autocapitalize="off" spellcheck="false"><button class="btn small" id="fmyeniac" type="button"><svg class="ik"><use href="#i-arti"/></svg>Yeni</button></div>
+  <div class="fm-yeni" id="fmyeni" hidden><input id="fmyad" placeholder="Firma adı (Luca'ya böyle gider)" autocapitalize="off"><input id="fmytel" inputmode="tel" placeholder="Telefon (isteğe bağlı)"><button class="btn small primary" id="fmyekle" type="button">Ekle</button></div>
+  <div class="fm-liste" id="fmliste"></div>
+</div></div>
 <div class="modal" id="yenilik" hidden><div class="mbox">
   <div class="mt" id="yeniliktitle">Yenilikler</div>
   <ul class="yenilik" id="yenilikliste"></ul>
@@ -127,17 +136,18 @@
 </div></div>
 
 <!-- Uygulama: sıra önemli (tanımlar önce, açılış en son). Ayrıntı: README.md -->
-<script src="js/temel.js?v=18"></script>
-<script src="js/depo.js?v=18"></script>
-<script src="js/ayarlar.js?v=18"></script>
-<script src="js/kontrol.js?v=18"></script>
-<script src="js/kalite.js?v=18"></script>
-<script src="js/arayuz.js?v=18"></script>
-<script src="js/okuyucu-claude.js?v=18"></script>
-<script src="js/okuyucu-tesseract.js?v=18"></script>
-<script src="js/okuyucu-paddle.js?v=18"></script>
-<script src="js/okuma.js?v=18"></script>
-<script src="js/disari.js?v=18"></script>
-<script src="js/baslat.js?v=18"></script>
+<script src="js/temel.js?v=19"></script>
+<script src="js/depo.js?v=19"></script>
+<script src="js/ayarlar.js?v=19"></script>
+<script src="js/kontrol.js?v=19"></script>
+<script src="js/kalite.js?v=19"></script>
+<script src="js/arayuz.js?v=19"></script>
+<script src="js/okuyucu-claude.js?v=19"></script>
+<script src="js/okuyucu-tesseract.js?v=19"></script>
+<script src="js/okuyucu-paddle.js?v=19"></script>
+<script src="js/okuma.js?v=19"></script>
+<script src="js/disari.js?v=19"></script>
+<script src="js/firmalar.js?v=19"></script>
+<script src="js/baslat.js?v=19"></script>
 </body>
 </html>
