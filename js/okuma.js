@@ -44,8 +44,9 @@ async function extract(r){
     if(j.makbuz_mu===false)d.makbuz_mu=false;d.tarih=normDate(d.tarih);
     if(j.yazi_metin&&d.yazi!=null)d.not=[d.not,'Yazıyla: '+String(j.yazi_metin).trim()].filter(Boolean).join(' · ');
     r.okuFirma=d.firma;d.firma=firmaAd(d.firma);d.evrak_no=evrakKisa(d.evrak_no);r.el=j.tur==='el_yazisi';r.onay=false;r.ocr=null;
+    const uz=TParse.uzlas?TParse.uzlas(d,[]):false;
     r.auto=fill(d);d.aciklama=mkAck(d);r._ack=d.aciklama;
-    r.d=d;r.unsure=Array.isArray(j.belirsiz)?j.belirsiz.filter(k=>FIELDS.some(f=>f.k===k)):[];r.akt=null;r.oku=okunanAnlik(d);
+    r.d=d;r.unsure=(Array.isArray(j.belirsiz)?j.belirsiz.filter(k=>FIELDS.some(f=>f.k===k)):[]).concat(uz?['toplam',...PAY.filter(k=>d[k]!=null)]:[]);r.akt=null;r.oku=okunanAnlik(d);
     r.status='done';r.open=true;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;delete r._api;
     save(r);saveImg(r,r._small);delete r._small;
   }catch(e){
@@ -56,6 +57,7 @@ async function extract(r){
 }
 async function prep(r){   // küçük resmi ve yüklenecek kopyayı sırası gelince hazırla (seçim anında hepsini birden işleyip bekletme)
   if(r.blob||!r.file)return true;
+  r._kirp=r._kaynak=r._bolge=null;if(!r._api)r.ank=null;   // yeni fotoğraf: eski kırpmalar geçersiz
   try{const s=await shrink(r.file);r.blob=s.blob;r.thumb=s.thumb;r._small=s.small}catch(e){r.status='error';r.err=e.message;render();return false}
   saveOrig(r,r.pages||[r.file]);
   try{r.q=r.file._q||await fotoKalite(r.file);const k=kaliteSorun(r.q);if(k.length){toast('📷 '+KALITE[k[0]].m+' — okuma hatalı olabilir');setProg(r,KALITE[k[0]].m+'; yine de okunuyor…')}}catch(e){r.q=null}

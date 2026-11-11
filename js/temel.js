@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=17;
+const APP_VER=18;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  18:['Toplam ile nakit (tek ödeme türü) artık hep aynı: biri değişince öteki de değişir; okumada biri eksik okunduysa (62,25 ↔ 3.062,25 · 200 ↔ 6.200) büyüğü alınır','Eksik alanlarda firma da var: bilinen firmalardan seçebilirsin','6 aydan eski tarihte uyarı (yıl yanlış okunmuş olabilir)','Yeniden çekilen fotoğrafta eski kırpma görüntüleri kalmaz; yedekten yükleme tüm bilgileri geri getirir'],
   17:['Fotoğrafa dokununca tam ekran görüntüleyici: iki parmakla yakınlaştır, kaydır, çift dokun. Eksik alanlardaki küçük görüntüye dokununca o bölge büyütülmüş açılır','Eksik alanlardaki görüntüler daha geniş bölge gösterir','Bir-iki harfi yanlış okunan firma adı da tanınır; Ebru Avcı → “Ebru avcı”'],
   16:['El yazısı makbuzlarda “Eksik alanlar”: turuncu tarih / evrak no / tutar kartın en üstünde, yanında makbuzun o kısmı büyütülmüş','Kısa yazım: 2310 → 23.10.2026; dokununca okunan değer seçili gelir, “ileri” sonraki alana geçer','Telefon numarasından tanınan firma artık şüpheli sayılmaz'],
   15:['Koçan makbuzlarda bitişik okunan seri no (N000321) ve el yazısı tarih (Tarih 12/10/2026) okunur','“Yalnız” satırı bozuk okunsa da tutarın yazılışıyla karşılaştırılır; uyuşursa tutar turuncu gelmez'],

@@ -51,7 +51,7 @@ $('#bkin').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   try{const j=JSON.parse(await f.text());if(!j||j.app!=='tahsilat'||!Array.isArray(j.rows))throw 0;
     let n=0;for(const x of j.rows){if(!x||!x.id||!x.d)continue;if(rows.some(r=>r.id===x.id))continue;
-      const r={id:String(x.id),status:'done',open:false,d:x.d,unsure:x.unsure||[],auto:x.auto||[],src:x.src||'',_ack:x._ack||'',created:x.created||Date.now(),el:!!x.el,onay:!!x.onay,okuFirma:x.okuFirma||'',akt:x.akt||null,hasImg:false};
+      const {img,...y}=x;const r={...y,id:String(x.id),status:'done',open:false,unsure:x.unsure||[],auto:x.auto||[],created:x.created||Date.now(),hasImg:false,hasOrig:false};
       rows.push(r);save(r);if(x.img)await saveImg(r,x.img);n++}
     sortRows();render();toast(n?`${n} makbuz yedekten yüklendi`:'Yedekteki makbuzlar zaten listede');
   }catch(err){toast('Bu dosya geçerli bir yedek değil.')}

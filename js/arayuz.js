@@ -101,20 +101,25 @@ function renderSum(){
 }
 // ---- Eksik alanlar: turuncu tarih / evrak no / tutar kartın en üstünde, yanında makbuzun o kısmı büyütülmüş ----
 const HZ_TUTAR=['toplam','nakit','kart','cek'];
-function hizliAlanlar(r){const u=r.unsure||[],a=[];if(u.includes('tarih')||!r.d.tarih)a.push('tarih');if(u.includes('evrak_no')||!r.d.evrak_no)a.push('evrak_no');if(HZ_TUTAR.some(k=>u.includes(k))||!r.d.toplam)a.push('tutar');return a}
+function hizliAlanlar(r){const u=r.unsure||[],a=[];if(u.includes('firma')||!r.d.firma)a.push('firma');if(u.includes('tarih')||!r.d.tarih)a.push('tarih');if(u.includes('evrak_no')||!r.d.evrak_no)a.push('evrak_no');if(HZ_TUTAR.some(k=>u.includes(k))||!r.d.toplam)a.push('tutar');return a}
 function hizliHTML(r){const a=hizliAlanlar(r);if(!a.length||r.src==='elle'&&!r.thumb&&!r.hasImg)return '';
-  const ad={tarih:'Tarih',evrak_no:'Evrak no',tutar:'Tutar'},ank={tarih:'tarih',evrak_no:'no',tutar:'tutar'};
+  const ad={firma:'Firma (listeden seçebilir ya da yazabilirsin)',tarih:'Tarih',evrak_no:'Evrak no',tutar:'Tutar'},ank={tarih:'tarih',evrak_no:'no',tutar:'tutar'};firmaListesi();
   const giris=k=>k==='tutar'?`<input class="hz" data-hizli="tutar" data-id="${r.id}" inputmode="decimal" enterkeyhint="next" placeholder="ör. 4230" value="${esc(fm(r.d.toplam))}">`
+    :k==='firma'?`<input class="hz" data-id="${r.id}" data-k="firma" list="firmalist" enterkeyhint="next" autocomplete="off" placeholder="makbuzu kesen firma" value="${esc(r.d.firma||'')}">`
     :k==='tarih'?`<input class="hz" data-id="${r.id}" data-k="tarih" inputmode="numeric" enterkeyhint="next" placeholder="ör. 2310 → 23.10" value="${esc(r.d.tarih||'')}">`
     :`<input class="hz" data-id="${r.id}" data-k="evrak_no" enterkeyhint="next" placeholder="makbuz no" value="${esc(r.d.evrak_no||'')}">`;
   return `<section class="hizli"><div class="hz-h">${ik('kalem')}Eksik alanlar <span>— fotoğrafa bakıp yaz, “ileri” ile sonrakine geç</span></div>
-    ${a.map(k=>`<div class="hz-s" data-hzalan="${k}">${r.ank&&(r.ank[ank[k]]||k==='evrak_no'&&r.ank.tarih)?`<img class="hz-k" data-kirp="${k}" alt="">`:''}<label>${ad[k]}</label>${giris(k)}</div>`).join('')}
+    ${a.map(k=>`<div class="hz-s" data-hzalan="${k}">${k!=='firma'&&r.ank&&(r.ank[ank[k]]||k==='evrak_no'&&r.ank.tarih)?`<img class="hz-k" data-kirp="${k}" alt="">`:''}<label>${ad[k]}</label>${giris(k)}</div>`).join('')}
     <div class="set-row" style="justify-content:flex-end"><button class="btn small" data-onay="${r.id}">Hepsi doğru</button></div></section>`}
+// Firma seçme listesi: tanımlı ve öğrenilmiş adlar + listedeki makbuzların firmaları
+function firmaListesi(){let dl=document.getElementById('firmalist');if(!dl){dl=document.createElement('datalist');dl.id='firmalist';document.body.appendChild(dl)}
+  const ad=new Set([...Object.values(FIRMA_TEL0),...Object.values(FIRMA0),...Object.values(FIRMA),...Object.values(FIRMA_TEL),...rows.map(r=>r.d&&r.d.firma).filter(Boolean)]);
+  const h=[...ad].sort((a,b)=>a.localeCompare(b,'tr')).map(a=>`<option value="${esc(a)}">`).join('');if(dl.innerHTML!==h)dl.innerHTML=h}
 // Kırpma: makbuzun aslı (saklıysa) ya da küçük kopyası; etiketin sağı ve altı (değer çoğu formda sağda, bazılarında altta)
 async function kirpDoldur(r){const c=document.getElementById('c_'+r.id);if(!c||!r.ank)return;const im=[...c.querySelectorAll('img[data-kirp]')].filter(i=>!i.src);if(!im.length)return;
   r._kirp=r._kirp||{};
   if(!r._kaynak){try{let b=null;if(r.hasOrig){const o=await IDB.get('orig',r.id);if(o&&o[0])b=o[0]}const src=b?URL.createObjectURL(b):r.thumb||(r.hasImg?await IDB.get('imgs',r.id):null);if(!src)return;
-    r._kaynak=await new Promise((a,h)=>{const i=new Image();i.onload=()=>a(i);i.onerror=h;i.src=src})}catch(e){return}}
+    r._kaynak=await new Promise((a,h)=>{const i=new Image();i.onload=()=>a(i);i.onerror=h;i.src=src});if(b)setTimeout(()=>URL.revokeObjectURL(src),60000)}catch(e){return}}
   const I=r._kaynak,W=I.naturalWidth,H=I.naturalHeight;
   for(const el of im){const k=el.dataset.kirp;if(!r._kirp[k]){const L=r.ank[{tarih:'tarih',evrak_no:'no',tutar:'tutar'}[k]]||(k==='evrak_no'&&r.ank.tarih);if(!L)continue;const h=Math.max(.012,L[3]-L[1]);
       const b=k==='tutar'?[L[0]-.06,L[1]-h*2,1,L[3]+h*4]:k==='tarih'?[L[0]-.06,L[1]-h*2.5,Math.min(1,L[0]+Math.max(.55,(L[2]-L[0])*6)),L[3]+h*2.5]:[L[0]-.06,L[1]-h*2,Math.min(1,L[0]+.5),L[3]+h*2];
@@ -179,7 +184,7 @@ document.addEventListener('click',e=>{
   const kz=e.target.closest('img[data-kirp]');if(kz&&kz.dataset.bolge){const c=kz.closest('.card'),r=c&&rows.find(x=>'c_'+x.id===c.id);if(r)gvAc(r,kz.dataset.bolge.split(',').map(Number));return}
   const t=e.target.closest('[data-tog],[data-del],[data-retry],[data-zoom],[data-reparse],[data-copyocr],[data-recam],[data-regal],[data-f],[data-aktsil],[data-bildir],[data-bildirac],[data-devam],[data-claude],[data-onay]');if(!t)return;
   if(t.dataset.claude){const r=rows.find(x=>x.id===t.dataset.claude);if(r)claudeOku(r);return}
-  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);toast('Onaylandı')}return}
+  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);const k=checks(r).find(c=>!c.ok&&!c.info);toast(k?'Onaylandı, ama bir uyarı kaldı: '+k.m:'Onaylandı')}return}
   if(t.dataset.devam){devId=t.dataset.devam;const i=$('#devam');i.value='';i.click();return}
   if(t.dataset.f){FLT.f=t.dataset.f;render();return}
   if(t.dataset.aktsil){const r=rows.find(x=>x.id===t.dataset.aktsil);r.akt=null;save(r);render();toast('Bir sonraki Luca dosyasına yeniden girecek');return}
@@ -218,6 +223,11 @@ document.addEventListener('change',e=>{
   if(f.t==='num'&&i.value.trim()!==''&&r.d[f.k]==null)toast('Sayı anlaşılamadı: '+i.value);
   if(r.unsure)r.unsure=r.unsure.filter(k=>k!==f.k);
   if(f.t==='num'){refill(r,f.k);if(r.unsure&&(r.auto||[]).length)r.unsure=r.unsure.filter(k=>!r.auto.includes(k))}   // kendiliğinden hesaplanan alan artık şüpheli değil
+  // Tek ödeme türü varsa toplam ile o alan hep aynı kalsın: biri değişince öteki de değişir (iki ayrı yerde düzeltmek gerekmesin)
+  if(f.t==='num'&&(f.k==='toplam'||PAY.includes(f.k))&&!r.d.diger){const p=PAY.filter(k=>r.d[k]!=null);
+    if(p.length===1&&r.d.toplam!=null&&Math.abs(r.d.toplam-r.d[p[0]])>0.005){
+      if(f.k==='toplam')r.d[p[0]]=r.d.toplam;else{r.d.toplam=r.d[p[0]];r.auto=(r.auto||[]).filter(k=>k!=='toplam')}
+      r.unsure=(r.unsure||[]).filter(k=>k!=='toplam'&&k!==p[0])}}
   if(['firma','evrak_no','tarih'].includes(f.k)&&(!r.d.aciklama||r.d.aciklama===r._ack)){r.d.aciklama=mkAck(r.d);r._ack=r.d.aciklama}
   i.value=fv(f,r.d[f.k]);
   // uyarı listesi alanların üstünde: kısalıp uzayınca ekran kaymasın — odaktaki (ya da değişen) kutu aynı yerde kalsın

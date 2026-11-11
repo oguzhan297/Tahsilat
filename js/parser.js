@@ -147,7 +147,7 @@
 
   // ---- Evrak no ----
   function evrakBul(lines, F, pos) {
-    const tok = (s, kisa) => { const m = String(s).trim().match(kisa ? /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]*)/ : /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]{2,})/); return m && (kisa ? /\d/ : /\d{3}/).test(m[1]) ? m[1] : null; };
+    const tok = (s, kisa) => { const m = String(s).trim().match(kisa ? /^[:.\s]*(?:[0O]\s?[:.]\s*)?([A-Z0-9][A-Z0-9\-\/]*)/ : /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]{2,})/); return m && (kisa ? /\d/ : /\d{3}/).test(m[1]) ? m[1] : null; };
     const diger = [];
     // 1) "Evrak No: T59-2026000804", "Makbuz No: 123"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKBUZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1], true); if (t) return { v: t, diger }; } }
@@ -266,12 +266,15 @@
     if (d.yazi == null) { const pay0 = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), v = d.toplam != null ? d.toplam : pay0;
       if (v > 0) { const b = yaziBenzer(lines, v); if (b) { d.yazi = v; notes.push(`Yazıyla tutar bozuk okundu ama ${v} ile %${Math.round(b * 100)} uyuşuyor`); } } }
 
+    const uzlasti = uzlas(d, notes);
+
     // ---- emin olunamayan alanlar ----
     const pay = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0);
     const top = d.toplam != null ? d.toplam : (pay > 0 ? r2(pay) : null);
     if (!d.tarih || !t.kesin || el) unsure.push('tarih');
-    if (!d.evrak_no || ev.zayif) unsure.push('evrak_no');
+    if (!d.evrak_no || ev.zayif || /^0+$/.test(d.evrak_no)) unsure.push('evrak_no');
     if (zayifTop) unsure.push('toplam');
+    if (uzlasti) unsure.push('toplam', ...['nakit', 'kart', 'cek'].filter(k => d[k] != null));
     if (top == null) unsure.push('toplam', 'nakit');   // tutar hiç okunamadı: toplam da ödeme de boş
     else if (d.toplam != null && pay > 0 && Math.abs(pay - d.toplam) > 0.005) { unsure.push('toplam', ...['nakit', 'kart', 'cek'].filter(k => d[k] != null)); notes.push(`Toplam (${d.toplam}) ile ödeme (${r2(pay)}) farklı okundu`); }
     else if (d.yazi != null && Math.abs(d.yazi - top) > 0.005) unsure.push('toplam');
@@ -284,6 +287,23 @@
     const found = (d.firma ? 1 : 0) + (d.tarih ? 1 : 0) + (d.evrak_no ? 1 : 0) + (top != null ? 1 : 0);
     const makbuz = pos || /TAHS[I1]LAT|MAKBUZ|TAHS[I1]L\sED/.test(all);
     return { d, unsure: [...new Set(unsure)], notes, found, el, pos, makbuz, cnt, tarihKesin: t.kesin };
+  }
+
+  // Toplam ile (tek) ödeme alanı farklı okunduysa güvenli durumlarda birleştir:
+  //  - biri ötekinin sonu ise (62,25 ↔ 3.062,25 · 200 ↔ 6.200) baştaki rakamlar kaybolmuştur → büyüğü
+  //  - fark 1 TL'den azsa (1.240,00 ↔ 1.240,20) kuruş gürültüsüdür → yazıyla tutara uyan, yoksa kuruşsuz olanı
+  // Uzlaşma olsa da iki alan da kontrol için işaretli kalır (çağıran işaretler); uzlaşamazsa olduğu gibi bırakılır.
+  function uzlas(d, notes) {
+    const p = ['nakit', 'kart', 'cek'].filter(k => d[k] != null);
+    if (d.toplam == null || p.length !== 1 || d.diger) return false;
+    const k = p[0], a = d.toplam, b = d[k]; if (Math.abs(a - b) < 0.005) return false;
+    const iz = v => String(Math.round(v * 100)), ia = iz(a), ib = iz(b);
+    let v = null;
+    if (ia.length !== ib.length && (ia.endsWith(ib) || ib.endsWith(ia))) v = Math.max(a, b);
+    else if (Math.abs(a - b) < 1) v = d.yazi != null && [a, b].some(x => Math.abs(x - d.yazi) < 0.005) ? d.yazi : (Math.round(a) === a ? a : Math.round(b) === b ? b : a);
+    if (v == null) return false;
+    notes.push(`Toplam ${a} ile ${k} ${b} farklı okundu; ${v} alındı — kontrol et`);
+    d.toplam = v; d[k] = v; return true;
   }
 
   // Okuma ne kadar güvenilir: 6 ve üzeri "tam" (matbu makbuzda tek okuma yeter)
@@ -319,8 +339,9 @@
       if (!kesin) unsure.add(k);
       if (celiski) notes.push(`Okumalar farklı (${k}): ${sira.map(o => o.v).join(' / ')}`);
     }
-    const pay = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), top = d.toplam != null ? d.toplam : (pay > 0 ? pay : null);
     for (const k of ['tarih', 'evrak_no']) if (!d[k]) unsure.add(k);
+    if (uzlas(d, notes)) { unsure.add('toplam'); for (const k of ['nakit', 'kart', 'cek']) if (d[k] != null) unsure.add(k); }
+    const pay = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), top = d.toplam != null ? d.toplam : (pay > 0 ? pay : null);
     if (top == null) { unsure.add('toplam'); unsure.add('nakit'); }
     else { if (d.nakit == null) unsure.delete('nakit'); if (d.toplam != null && pay > 0 && Math.abs(pay - d.toplam) > 0.005) unsure.add('toplam'); if (d.yazi != null && Math.abs(d.yazi - top) > 0.005) unsure.add('toplam'); }
     if (!d.firma) { const f = list.map(r => r.d.firma).find(Boolean); if (f) d.firma = f; else unsure.add('firma'); }
@@ -329,5 +350,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 17, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 18, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);

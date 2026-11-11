@@ -5,6 +5,7 @@ function checks(r){
   if(d.makbuz_mu===false)out.push({ok:false,m:'Bu görüntü tahsilat makbuzuna benzemiyor; değerleri dikkatle kontrol et.'});
   if(!d.tarih)out.push({ok:false,m:r.el?'Tarih okunamadı (el yazısı) — fotoğraftan bakıp yaz. Yalnız gün.ay yazman yeter.':'Tarih boş'});
   else if(!dateOk(d.tarih))out.push({ok:false,m:`Tarih geçersiz, ileri tarihli ya da GG.AA.YYYY biçiminde değil: “${d.tarih}”`});
+  else if(Date.now()-dnum(d.tarih)*864e5>180*864e5)out.push({ok:false,m:`Tarih 6 aydan eski (${d.tarih}) — yıl yanlış okunmuş olabilir`});   // ör. el yazısı 2026 → 2016
   if(!d.evrak_no)out.push({ok:false,m:'Evrak No boş'});
   else if(rows.some(x=>x!==r&&x.status==='done'&&x.d.evrak_no&&nno(x.d.evrak_no)===nno(d.evrak_no)&&nkey(x.d.firma)===nkey(d.firma)&&x.d.tarih===d.tarih&&Math.round((x.d.toplam||0)*100)===Math.round((d.toplam||0)*100)))out.push({ok:false,m:'Aynı firma, tarih, evrak no ve tutarla listede başka bir makbuz var — iki kez eklenmiş olabilir'});
   if(!d.toplam)out.push({ok:false,m:r.el?'Tutar okunamadı (el yazısı) — fotoğraftan bakıp yaz.':'Toplam tutar yok'});
