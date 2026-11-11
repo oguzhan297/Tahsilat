@@ -17,7 +17,7 @@ function applyParse(r,text,pre){
   const res=pre||(ps.length>1?TParse.merge(ps.map(p=>TParse.parse(p))):TParse.parse(text));const d=res.d;
   const keepAck=r.d&&r.d.aciklama&&r.d.aciklama!==r._ack?r.d.aciklama:null;
   d.not=res.notes.join(' · ');if(!(res.makbuz&&res.found>=2))d.makbuz_mu=false;
-  r.okuFirma=d.firma;d.firma=firmaAd(d.firma);
+  r.okuFirma=d.firma;d.firma=firmaAd(d.firma,text);
   r.el=!!res.el;r.onay=false;
   r.ocr=text;r.auto=fill(d);
   d.aciklama=keepAck||mkAck(d);if(!keepAck)r._ack=d.aciklama;

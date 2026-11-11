@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=6;
+const APP_VER=7;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  7:['Firma, makbuzdaki basılı telefon numarasından da tanınır: logodaki adı okunamayan firmanın adını bir kez yazarsan sonraki makbuzlarında kendiliğinden gelir (Has Gülay tanımlı)'],
   6:['Logodaki firma adı okunamayınca “PAZ” gibi anlamsız ad yazılmaz; firma boş gelir'],
   5:['Bir alanı düzeltince bildirim kutusu kartta kendiliğinden açılır: isteğe bağlı not yaz, tek dokunuşla Gönder'],
   4:['Kartta yazarken klavye artık kapanmıyor (“Kontrol et” süzgeci açıkken de) ve ekran kaymıyor','El yazısı koçanlarda: “1240-00” gibi tutarlar, kenarda yazılı seri no (baştaki sıfırlar atılır: 953), Z3/10 gibi okunan tarihler','Fotoğrafa yandaki makbuz girdiyse ödemelerle tutan TOPLAM seçilir'],
@@ -53,10 +54,24 @@ const nkey=s=>String(s||'').toLocaleUpperCase('tr-TR').replace(/[^0-9A-ZÇĞİÖ
 const nno=s=>nkey(s).replace(/^0+/,'');
 try{const a=localStorage.getItem('th_ack');if(a)ACK=a}catch(e){}
 const mkAck=d=>ACK.split('{firma}').join(d.firma||'').split('{no}').join(d.evrak_no||'').split('{tarih}').join(d.tarih||'').replace(/\s+/g,' ').trim();
-// Firma adı düzeltmeleri: okuyucunun okuduğu ad → senin yazdığın ad (bir kez düzeltirsin, sonraki makbuzlarda kendiliğinden gelir)
-let FIRMA={};try{FIRMA=JSON.parse(localStorage.getItem('th_firma')||'{}')||{}}catch(e){}
-const firmaAd=okunan=>FIRMA[nkey(okunan)]||okunan;
-function firmaOgren(okunan,dogru){if(!okunan||!dogru||nkey(okunan)===nkey(dogru)&&okunan===dogru)return;FIRMA[nkey(okunan)]=dogru;try{localStorage.setItem('th_firma',JSON.stringify(FIRMA))}catch(e){}}
+// Firma adı düzeltmeleri: bir kez düzeltirsin, sonraki makbuzlarda kendiliğinden gelir. İki yoldan tanınır:
+//  1) okuyucunun okuduğu ad → senin yazdığın ad
+//  2) makbuzdaki basılı TELEFON numarası → senin yazdığın ad (logodaki ad okunamasa da firma tanınır, ör. Has Gülay)
+let FIRMA={},FIRMA_TEL={};
+try{FIRMA=JSON.parse(localStorage.getItem('th_firma')||'{}')||{}}catch(e){}
+try{FIRMA_TEL=JSON.parse(localStorage.getItem('th_firma_tel')||'{}')||{}}catch(e){}
+// Önceden bilinenler (kullanıcının bildirimlerinden): telefon → firma
+const FIRMA_TEL0={'0378268095':'HAS GÜLAY GIDA VE TEMİZLİK MADDELERİ'};
+// Satırlarda "Tel/GSM/Fax" geçen numaralar (yalnız rakamlar, en az 9 hane). Müşterinin vergi no'su vb. karışmasın diye yalnız telefon.
+function telNolar(text){const out=new Set();for(const l of String(text||'').split(/\n/)){if(!/\b(TEL|GSM|FAX|TELEFON)\b/i.test(l))continue;
+  for(const m of l.replace(/(?<=\d)[\s.()\-\/]+(?=\d)/g,'').matchAll(/\d{9,11}/g))out.add(m[0].replace(/^90(?=\d{10}$)/,'').replace(/^(?=[1-9]\d{9}$)/,'0'))}
+  return [...out]}
+function firmaAd(okunan,text){for(const t of telNolar(text)){const v=FIRMA_TEL[t]||FIRMA_TEL0[t];if(v)return v}return FIRMA[nkey(okunan)]||okunan}
+function firmaOgren(okunan,dogru,text){if(!dogru)return false;let ok=false;
+  if(okunan&&nkey(okunan)!==nkey(dogru)){FIRMA[nkey(okunan)]=dogru;ok=true}
+  for(const t of telNolar(text)){FIRMA_TEL[t]=dogru;ok=true}
+  try{localStorage.setItem('th_firma',JSON.stringify(FIRMA));localStorage.setItem('th_firma_tel',JSON.stringify(FIRMA_TEL))}catch(e){}
+  return ok}
 const NUMK=FIELDS.filter(f=>f.t!=='text').map(f=>f.k);
 const LS='tahsilat_rows_v1';
 let rows=[];let queue=[],busy=false;
