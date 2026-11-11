@@ -28,15 +28,15 @@ $('#test').onclick=async()=>{const t=$('#testres');t.textContent='Deneniyor…';
   try{await callClaude([{type:'text',text:'Sadece "tamam" yaz.'}],200,false);t.textContent='✓ Bağlantı çalışıyor';t.style.color='var(--ok)'}
   catch(e){t.textContent='✗ '+e.message;t.style.color='var(--err)'}};
 
-// ---- Hata bildirimi: gizli gelen kutusu (GitHub) ----
+// ---- Hata bildirimi: gizli gelen kutusu (GitHub) — Z Raporu'nunkiyle ortak depo, makbuzlar tahsilat/ klasörüne ----
 // Anahtar yalnız bu depoya yazabilen ince ayarlı bir GitHub anahtarıdır; sadece bu telefonda saklanır, sadece api.github.com'a gider.
 const GH_DEPO='oguzhan297/zraporu-gelen';
 const ghIstek=(yol,o={})=>fetch(`https://api.github.com/repos/${GH_DEPO}${yol}`,{...o,headers:{Authorization:'Bearer '+S.ghKey,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
 const b64Metin=t=>{const u=new TextEncoder().encode(t);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
 async function ghYukle(yol,b64,mesaj){const r=await ghIstek('/contents/'+yol,{method:'PUT',body:JSON.stringify({message:mesaj,content:b64})});
   if(!r.ok){const m=r.status===401?'anahtar geçersiz ya da süresi dolmuş':r.status===403||r.status===404?'anahtarın gelen kutusuna yazma izni yok':'GitHub hatası '+r.status;throw new Error(m)}}
-// dosyalar: [{ad, b64}] → gelen/<klasör>/ad
-async function ghGonder(klasor,dosyalar){for(const d of dosyalar)await ghYukle(`gelen/${klasor}/${d.ad}`,d.b64,`Okuma hatası bildirimi: ${klasor}`)}
+// dosyalar: [{ad, b64}] → tahsilat/<klasör>/ad — Z Raporu ile aynı gelen kutusu (aynı anahtar çalışsın), ayrı klasör
+async function ghGonder(klasor,dosyalar){for(const d of dosyalar)await ghYukle(`tahsilat/${klasor}/${d.ad}`,d.b64,`Tahsilat okuma hatası bildirimi: ${klasor}`)}
 $('#ghkey').value=S.ghKey||'';
 $('#ghkey').addEventListener('change',e=>{S.ghKey=e.target.value.trim();e.target.value=S.ghKey;saveS();$('#ghres').textContent=''});
 $('#ghpaylas').onclick=async()=>{const k=S.ghKey;if(!k){toast('Önce anahtarı gir');return}

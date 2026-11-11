@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=1;
+const APP_VER=2;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  2:['“Hata bildir” makbuzu kendi klasörüne gönderir (Z raporu bildirimleriyle karışmaz)'],
   1:['Tahsilat makbuzu okuyucu: matbu makbuzlar, POS slipleri ve elle doldurulan koçanlar']
 };
 const FIELDS=[
