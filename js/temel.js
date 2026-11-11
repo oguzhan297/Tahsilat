@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=8;
+const APP_VER=9;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  9:['Firma adı tanımları eski kartlara da uygulanır (elle değiştirmediğin ve Luca’ya aktarılmamış kartlar)'],
   8:['Deklanşör basıldığı anda çeker; çekim sırasında uygulama artık kendini yenilemez (kamera açıkken okuma bekler, daha az bellek)','Gönderdiğin makbuzlardaki 16 firmanın adı senin yazdığın şekilde kendiliğinden gelir','El yazısı tutarlarda okunan ile toplam çelişirse ikisi de turuncu işaretlenir'],
   7:['Firma, makbuzdaki basılı telefon numarasından da tanınır: logodaki adı okunamayan firmanın adını bir kez yazarsan sonraki makbuzlarında kendiliğinden gelir (Has Gülay tanımlı)'],
   6:['Logodaki firma adı okunamayınca “PAZ” gibi anlamsız ad yazılmaz; firma boş gelir'],

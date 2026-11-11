@@ -292,5 +292,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 8, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 9, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);

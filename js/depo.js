@@ -28,6 +28,10 @@ async function loadImg(r){
 const sortRows=()=>rows.sort((a,b)=>((a.status==='done')-(b.status==='done'))||((b.created||0)-(a.created||0)));
 async function load(){
   try{const all=await IDB.all('rows');rows=all.map(r=>({...r,status:'done',auto:r.auto||[],open:false}));
+    // Firma adı tanımları güncellendiyse eski kartlara da uygula (yalnız elle değiştirilmemiş ve Luca'ya aktarılmamış kartlar)
+    for(const r of rows){const d=r.d||{};if(r.akt||!r.oku||d.firma!==r.oku.firma)continue;
+      const yeni=firmaAd(r.okuFirma||d.firma,r.ocr);if(!yeni||yeni===d.firma)continue;
+      const ack=!d.aciklama||d.aciklama===r._ack;d.firma=yeni;r.oku.firma=yeni;if(ack){d.aciklama=mkAck(d);r._ack=d.aciklama}save(r)}
     setStore('ok')}
   catch(e){setStore('err');notice('Bu tarayıcı veri saklamaya izin vermiyor (gizli sekme olabilir). Makbuzlar kaydedilmez; CSV’yi indirmeyi unutma.')}
   sortRows();render();
