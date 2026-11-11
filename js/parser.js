@@ -62,6 +62,19 @@
     return r2(lira + (kurus || 0) / 100);
   }
 
+  const BIR = ['', 'bir', 'iki', 'uc', 'dort', 'bes', 'alti', 'yedi', 'sekiz', 'dokuz'], ON = ['', 'on', 'yirmi', 'otuz', 'kirk', 'elli', 'altmis', 'yetmis', 'seksen', 'doksan'];
+  const uc = n => (n >= 100 ? (n >= 200 ? BIR[Math.floor(n / 100)] : '') + 'yuz' : '') + ON[Math.floor(n % 100 / 10)] + BIR[n % 10];
+  function sayiYazi(v) { const n = Math.floor(v + 1e-9), m = Math.floor(n / 1e6), b = Math.floor(n % 1e6 / 1000), r = n % 1000;
+    return (m ? uc(m) + 'milyon' : '') + (b ? (b === 1 ? '' : uc(b)) + 'bin' : '') + uc(r) || 'sifir'; }
+  function lev(a, b) { const d = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) { let p = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, p + (a[i - 1] === b[j - 1] ? 0 : 1)); p = t; } }
+    return d[b.length]; }
+  // Satırlarda tutarın yazıyla hâline benzeyen bir sözcük dizisi var mı (en az %65 benzer)
+  function yaziBenzer(lines, v) { const h = sayiYazi(v); if (h.length < 6) return null; let en = 0;
+    for (const l of lines) for (const w of fold(l).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)) {
+      if (w.length < h.length * .6) continue; const k = w.replace(/(turklirasi|lira|tl|kurus).*$/, ''); const s = 1 - lev(k, h) / Math.max(k.length, h.length); if (s > en) en = s; }
+    return en >= .65 ? en : null; }
+
   // ---- Tarih ----
   const gecerli = (g, a, y) => { const d = new Date(y, a - 1, g); return d.getDate() === g && d.getMonth() === a - 1 && y >= 2015 && d <= new Date(Date.now() + 864e5); };
   const trh = (g, a, y) => `${String(g).padStart(2, '0')}.${String(a).padStart(2, '0')}.${y}`;
@@ -80,6 +93,12 @@
       if (m && gecerli(+m[1], +m[2], +m[3])) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
     }
     for (let i = 0; i < lines.length; i++) {
+      const e = F[i].search(/TA[RN][I1]H|TAR[I1][BN]/); if (e < 0) continue;
+      const r = lines[i].slice(e).replace(/^\S*?(?=[\d(|\[])/, '').slice(0, 18).replace(/[(|\[\]lI!]/g, '1').replace(/[^\d]/g, '');
+      const m = r.match(/^(\d{2})(\d{2})(20\d{2})/) || r.match(/^(\d{1,2})(\d{2})(20\d{2})$/);
+      if (m && gecerli(+m[1], +m[2], +m[3]) && new Date(+m[3], +m[2] - 1, +m[1]) > Date.now() - 400 * 864e5) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
+    }
+    for (let i = 0; i < lines.length; i++) {
       const m = lines[i].match(/(?<![\d.,])(\d{1,2})\s?[.,\/-]\s?(\d{1,2})\s?(?:[.,\/|-]\s?1?|1)(?=20\d{2}(?!\d))\s?(20\d{2})(?!\d)/);   // "13,1012026", "27.10.12026": eğik çizgi 1 okunmuş
       if (m && gecerli(+m[1], +m[2], +m[3])) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
     }
@@ -93,7 +112,7 @@
     let t = TRU(s).replace(/Č/g, 'Ğ').replace(/\bGİDA\b/g, 'GIDA').replace(/\s+/g, ' ').trim();
     const f = fold(t);
     // başlık / etiket / numara artıkları
-    const kes = [/TAHS[I1]LAT\s*MAKBUZU?/, /\bMAKBUZU?\b/, /\bS[I1]RA\b.*$/, /\bTEL\b.*$/, /\bTAR[I1]H\b.*$/, /\bMUSTER[I1]\b/, /\bNO\s?[:.].*$/];
+    const kes = [/TAHS[I1]LAT\s*MAKBUZU?/, /\bMAKBUZU?\b/, /\bS[I1]RA\b.*$/, /\bTEL\b.*$/, /\bTA[RN][I1][HB]\S*.*$/, /\bMUSTER[I1]\b/, /\bNO\s?[:.].*$/];
     let lo = 0, hi = t.length;
     for (const re of kes) { const m = f.slice(lo, hi).match(re); if (!m) continue; const a = lo + m.index, b = a + m[0].length;
       if (/\$$/.test(re.source)) hi = a; else if (a - lo < hi - b) lo = b; else hi = a; }
@@ -146,7 +165,7 @@
     if (pos) return { v: null, diger };
     // 5) koçan seri numarası: "N 100953", "№ 000330" ya da tek başına / satır sonunda baştan sıfırlı 4-6 hane
     const seri = v => v.replace(/^1(?=0{2,})/, '0').replace(/^0+(?=\d)/, '');
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º2]?|№)\s(\d{4,6})$/); if (m) return { v: seri(m[1]), diger, zayif: true }; }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O°º2]?\s?|№\s?|N\s)(\d{4,6})$/); if (m) return { v: seri(m[1]), diger, zayif: !/^0\d{5}$/.test(m[1]) }; }   // basılı 6 haneli, sıfırla başlayan seri no güvenilir
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{3,5})$/); if (m && !/TEL|GSM|FAX|IBAN/.test(F[i].slice(Math.max(0, F[i].length - m[1].length - 14)))) return { v: seri(m[1]), diger, zayif: true }; }
     return { v: null, diger };
   }
@@ -244,6 +263,9 @@
       const v = yaziyla(lines[i]); if (v != null && v >= 10) { d.yazi = v; notes.push('Yazıyla: ' + lines[i]); break; }
     }
 
+    if (d.yazi == null) { const pay0 = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0), v = d.toplam != null ? d.toplam : pay0;
+      if (v > 0) { const b = yaziBenzer(lines, v); if (b) { d.yazi = v; notes.push(`Yazıyla tutar bozuk okundu ama ${v} ile %${Math.round(b * 100)} uyuşuyor`); } } }
+
     // ---- emin olunamayan alanlar ----
     const pay = (d.nakit || 0) + (d.kart || 0) + (d.cek || 0) + (d.diger || 0);
     const top = d.toplam != null ? d.toplam : (pay > 0 ? r2(pay) : null);
@@ -307,5 +329,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 14, parse, consistency, merge, amounts, yaziyla, fold };
+  root.TParse = { version: 15, parse, consistency, merge, amounts, yaziyla, fold };
 })(typeof window !== 'undefined' ? window : globalThis);
