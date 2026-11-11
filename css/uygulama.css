@@ -313,3 +313,13 @@ ul.yenilik{margin:10px 0 14px;padding-left:20px;color:#cbd5e1;font-size:14px;lin
 /* Bildirim kutusu: başlık + not + Gönder */
 .bildirkutu textarea{width:100%;margin-top:8px;font:inherit;font-size:16px;padding:9px 11px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.38);color:var(--ink);resize:vertical}
 .bildirkutu .set-row{align-items:center}.bildirkutu .dzd{flex:1}.dzb>.ik{margin-right:5px;color:#fde68a}
+
+/* Kamera çerçevesi: dikey (termal makbuz, POS slipi) / yatay (koçan makbuzu). Yatayda çerçeve ekran genişliğinde, ortada. */
+.k-cerceve{transition:top .2s,bottom .2s,left .2s,right .2s}
+.kamera.yatay .k-cerceve{left:3%;right:3%;top:calc(50% - 47vw * .72 - 20px);bottom:auto;height:calc(94vw * .72)}
+.kamera.yatay .k-ipucu{bottom:-30px}
+#kyon{display:inline-flex;align-items:center;gap:6px}
+.kyon-i{display:inline-block;width:10px;height:15px;border:2px solid currentColor;border-radius:3px;transition:width .2s,height .2s}
+.kamera.yatay .kyon-i{width:16px;height:10px}
+.k-ust .btn,.k-ust #ksay{white-space:nowrap}.k-ust #ksay{font-size:14px}
+.k-cerceve{box-shadow:0 0 0 100vmax rgba(0,0,0,.45)!important}

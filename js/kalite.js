@@ -27,7 +27,7 @@ const KALITE={
 // Bulanık ve düşük çözünürlük okumayı bozar (testte bulanıkta doğru fiş 23/23 → 13/23): her zaman uyar.
 // Karanlık ve soluk fotoğrafları PaddleOCR çoğunlukla doğru okur: yalnız okumada da sorun varsa sebep olarak göster.
 function kaliteSorun(o,okumaSorunlu){if(!o)return [];const k=[];
-  if(o.min<900)k.push('kucuk');else if(o.keskin<0.07)k.push('bulanik');
+  if(o.min<(o.kamera?600:900))k.push('kucuk');else if(o.keskin<0.07)k.push('bulanik');
   if(okumaSorunlu){if(o.p95<110)k.push('karanlik');else if(o.kontrast<90&&o.p5>85)k.push('soluk')}
   return k}
 function kaliteHTML(r){const k=kaliteSorun(r.q,isBad(r));if(!k.length)return '';

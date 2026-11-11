@@ -141,7 +141,10 @@ $('#devam').addEventListener('change',e=>{devamEkle(e.target.files[0]);e.target.
 // ---- Arka arkaya tarama: uygulama içi kamera (açık kalır; her kare kalite kontrolünden geçip sıraya girer) ----
 // mod 'tek': "Fotoğraf çek" — net bir kare alınınca kapanır. mod 'seri': "Arka arkaya tara" — "Bitti"ye kadar açık kalır.
 // Uygulama içi kamera yoksa ya da izin verilmediyse telefonun kendi kamerası (#cam) açılır.
-const KAM={akis:null,sayi:0,isik:false,mod:'seri',yerel:false};
+const KAM={akis:null,sayi:0,isik:false,mod:'seri',yerel:false,yon:(()=>{try{return localStorage.getItem('th_kyon')||'dikey'}catch(e){return 'dikey'}})()};
+function yonUI(){$('#kamera').classList.toggle('yatay',KAM.yon==='yatay');$('#kyonyazi').textContent=KAM.yon==='yatay'?'Yatay':'Dikey';
+  $('#kipucu').textContent=KAM.yon==='yatay'?'Yatay makbuzu (koçan) çerçeveye sığdır':'Makbuzu çerçeveye sığdır, net görününce çek'}
+$('#kyon').onclick=()=>{KAM.yon=KAM.yon==='yatay'?'dikey':'yatay';try{localStorage.setItem('th_kyon',KAM.yon)}catch(e){}yonUI()};
 const yerelKamera=()=>{const i=$('#cam');i.value='';i.click()};
 async function kameraAc(mod='seri'){
   KAM.mod=mod;
@@ -149,7 +152,7 @@ async function kameraAc(mod='seri'){
   try{KAM.akis=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1440}}})}
   catch(e){KAM.yerel=true;toast(e&&e.name==='NotAllowedError'?'Kamera izni verilmedi. Telefonun kamerası için tekrar dokun (izin: Ayarlar › Safari › Kamera)':'Kamera açılamadı. Telefonun kamerası için tekrar dokun');return}
   const tek=mod==='tek';$('#ksay').hidden=tek;$('#kbitti').textContent=tek?'Vazgeç':'Bitti';
-  $('#kipucu').textContent=tek?'Makbuzu çerçeveye sığdır, net görününce çek · en yüksek kalite için: Telefon kamerası':'Makbuzu çerçeveye sığdır, net görününce çek';
+  yonUI();
   const v=$('#kvid');v.srcObject=KAM.akis;KAM.sayi=0;$('#ksay').textContent='0 makbuz';$('#kson').removeAttribute('src');kMesaj('');
   $('#kamera').hidden=false;document.body.classList.add('kamera-acik');
   try{await v.play()}catch(e){}
@@ -161,9 +164,15 @@ async function kameraAc(mod='seri'){
 function kameraKapat(){if(KAM.akis)KAM.akis.getTracks().forEach(t=>t.stop());KAM.akis=null;$('#kvid').srcObject=null;$('#kamera').hidden=true;document.body.classList.remove('kamera-acik');
   if(KAM.sayi&&KAM.mod!=='tek')toast(`${KAM.sayi} makbuz eklendi; okumalar sırayla sürüyor`);pump()}
 function kMesaj(m,tur){const el=$('#kmesaj');el.textContent=m;el.className='k-mesaj'+(tur?' '+tur:'');clearTimeout(el._t);if(m)el._t=setTimeout(()=>{el.textContent='';el.className='k-mesaj'},2600)}
-// Kare alma: deklanşöre basıldığı anda video karesi tuvale çizilir (bekleme yok); kodlama ve kalite ölçümü sonra.
+// Kare alma: deklanşöre basıldığı anda video karesinin çerçeve içi tuvale çizilir (bekleme yok); kodlama ve kalite ölçümü sonra.
 // iPhone'da ImageCapture yok; Android'de takePhoto 1–2 sn sürdüğü için kullanılmıyor (deklanşör gecikmesi).
-function kareCiz(){const v=$('#kvid');if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c}
+function kareCiz(){const v=$('#kvid'),vw=v.videoWidth,vh=v.videoHeight;if(!vw)return null;
+  // Ekranda görünen video (object-fit: cover) → video pikseli; çerçevenin dışı (yandaki makbuz, masa) kesilir, kenarlarda %6 pay kalır
+  const V=v.getBoundingClientRect(),F=$('#kcer').getBoundingClientRect(),k=Math.max(V.width/vw,V.height/vh),ox=V.left+(V.width-vw*k)/2,oy=V.top+(V.height-vh*k)/2;
+  const px=F.width*.06/k,py=F.height*.06/k;
+  let x0=Math.max(0,(F.left-ox)/k-px),y0=Math.max(0,(F.top-oy)/k-py),x1=Math.min(vw,(F.right-ox)/k+px),y1=Math.min(vh,(F.bottom-oy)/k+py);
+  if(!(x1-x0>50&&y1-y0>50)){x0=0;y0=0;x1=vw;y1=vh}
+  const c=document.createElement('canvas');c.width=Math.round(x1-x0);c.height=Math.round(y1-y0);c.getContext('2d').drawImage(v,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);return c}
 $('#seri').onclick=()=>kameraAc('seri');
 $('#tekcek').onclick=()=>kameraAc('tek');
 $('#kyerel').onclick=()=>{KAM.sayi=0;kameraKapat();yerelKamera()};   // en yüksek çözünürlük: telefonun kendi kamerası
@@ -177,10 +186,10 @@ $('#kdek').onclick=async()=>{
     const f=$('#kflas');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');navigator.vibrate&&navigator.vibrate(25);
     if(!c){kMesaj('Çekilemedi, tekrar dene','kotu');return}
     // anında kalite kontrolü aynı tuvalden (görüntüyü yeniden açmadan): bulanık / küçük kare sıraya girmez
-    let q=null;try{q=kaliteOlc(c,c.width,c.height)}catch(e){}
+    let q=null;try{q=kaliteOlc(c,c.width,c.height);q.kamera=1}catch(e){}
     const k=kaliteSorun(q);
     if(k.includes('bulanik')){kMesaj('Bulanık — sabit tut, tekrar çek','kotu');return}
-    if(k.includes('kucuk')){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
+    if(k.includes('kucuk')&&Math.max(c.width,c.height)<1100){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
     const tek=KAM.mod==='tek';
     if(tek)kameraKapat();   // tek çekimde kamerayı hemen kapat: bellek boşalsın, okuma beklemeden başlasın
     const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b){toast('Çekilemedi, tekrar dene');return}

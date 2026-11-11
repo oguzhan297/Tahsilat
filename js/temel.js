@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=11;
+const APP_VER=12;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  12:['Kamerada çerçeve Dikey / Yatay seçilebilir (üstteki düğme; seçimin hatırlanır). Yatay: koçan makbuzlar için ekran genişliğinde çerçeve','Fotoğraf yalnız çerçevenin içinden alınır: yandaki makbuz, masa, klavye okumaya karışmaz'],
   11:['Evrak no 6 haneden uzunsa yalnız son 6 hanesi yazılır','Okunan firma adları Türkçe harflerle yazılır (HEKİMOĞLU, TİCARET, DOĞAL…)'],
   10:['İs ra firmasının adı “is ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi” olarak düzeltildi'],
   9:['Firma adı tanımları eski kartlara da uygulanır (elle değiştirmediğin ve Luca’ya aktarılmamış kartlar)'],
