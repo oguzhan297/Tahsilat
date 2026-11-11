@@ -21,7 +21,7 @@ function aktarilacak(btn,label){
   btn.dataset.armed='hepsi';btn.textContent='Hepsini indir?';toast('Hepsi daha önce Luca’ya aktarıldı. Tekrar dokunursan tümü yeniden indirilir.');
   setTimeout(()=>{if(btn.dataset.armed==='hepsi'){btn.dataset.armed='';btn.innerHTML=ilk}},4000);return null;
 }
-function isaretle(list){const t=Date.now();for(const r of list){r.akt=t;save(r)}render();toast(`${list.length} makbuz Luca’ya aktarıldı olarak işaretlendi`)}
+function isaretle(list){const t=Date.now();for(const r of list){r.akt=t;save(r)}ornekTopla(list);render();toast(`${list.length} makbuz Luca’ya aktarıldı olarak işaretlendi`)}
 function guard(btn,label,list){
   const bad=(list||rows).filter(r=>r.status==='done'&&isBad(r)).length, pend=rows.filter(r=>r.status==='work'||r.status==='queued'||r.status==='error').length;
   if(!bad&&!pend)return true;

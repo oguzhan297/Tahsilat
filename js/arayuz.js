@@ -116,13 +116,15 @@ function firmaListesi(){let dl=document.getElementById('firmalist');if(!dl){dl=d
   const ad=new Set([...Object.values(FIRMA_TEL0),...Object.values(FIRMA0),...Object.values(FIRMA),...Object.values(FIRMA_TEL),...rows.map(r=>r.d&&r.d.firma).filter(Boolean)]);
   const h=[...ad].sort((a,b)=>a.localeCompare(b,'tr')).map(a=>`<option value="${esc(a)}">`).join('');if(dl.innerHTML!==h)dl.innerHTML=h}
 // Kırpma: makbuzun aslı (saklıysa) ya da küçük kopyası; etiketin sağı ve altı (değer çoğu formda sağda, bazılarında altta)
+// Etiket kutusundan (0–1 kesirler) alanın görüneceği bölge: [x0,y0,x1,y1]
+function kirpBolge(ank,k){const L=ank&&(ank[{tarih:'tarih',evrak_no:'no',tutar:'tutar'}[k]]||(k==='evrak_no'&&ank.tarih));if(!L)return null;const h=Math.max(.012,L[3]-L[1]);
+  return k==='tutar'?[L[0]-.06,L[1]-h*2,1,L[3]+h*4]:k==='tarih'?[L[0]-.06,L[1]-h*2.5,Math.min(1,L[0]+Math.max(.55,(L[2]-L[0])*6)),L[3]+h*2.5]:[L[0]-.06,L[1]-h*2,Math.min(1,L[0]+.5),L[3]+h*2]}
 async function kirpDoldur(r){const c=document.getElementById('c_'+r.id);if(!c||!r.ank)return;const im=[...c.querySelectorAll('img[data-kirp]')].filter(i=>!i.src);if(!im.length)return;
   r._kirp=r._kirp||{};
   if(!r._kaynak){try{let b=null;if(r.hasOrig){const o=await IDB.get('orig',r.id);if(o&&o[0])b=o[0]}const src=b?URL.createObjectURL(b):r.thumb||(r.hasImg?await IDB.get('imgs',r.id):null);if(!src)return;
     r._kaynak=await new Promise((a,h)=>{const i=new Image();i.onload=()=>a(i);i.onerror=h;i.src=src});if(b)setTimeout(()=>URL.revokeObjectURL(src),60000)}catch(e){return}}
   const I=r._kaynak,W=I.naturalWidth,H=I.naturalHeight;
-  for(const el of im){const k=el.dataset.kirp;if(!r._kirp[k]){const L=r.ank[{tarih:'tarih',evrak_no:'no',tutar:'tutar'}[k]]||(k==='evrak_no'&&r.ank.tarih);if(!L)continue;const h=Math.max(.012,L[3]-L[1]);
-      const b=k==='tutar'?[L[0]-.06,L[1]-h*2,1,L[3]+h*4]:k==='tarih'?[L[0]-.06,L[1]-h*2.5,Math.min(1,L[0]+Math.max(.55,(L[2]-L[0])*6)),L[3]+h*2.5]:[L[0]-.06,L[1]-h*2,Math.min(1,L[0]+.5),L[3]+h*2];
+  for(const el of im){const k=el.dataset.kirp;if(!r._kirp[k]){const b=kirpBolge(r.ank,k);if(!b)continue;
       (r._bolge=r._bolge||{})[k]=b.map(v=>Math.max(0,Math.min(1,v))).join(',');
       const x0=Math.max(0,b[0])*W,y0=Math.max(0,b[1])*H,x1=Math.min(1,b[2])*W,y1=Math.min(1,b[3])*H;if(x1-x0<10||y1-y0<10)continue;
       const s=Math.min(1.5,800/(x1-x0)),cv=document.createElement('canvas');cv.width=Math.round((x1-x0)*s);cv.height=Math.round((y1-y0)*s);
@@ -184,7 +186,7 @@ document.addEventListener('click',e=>{
   const kz=e.target.closest('img[data-kirp]');if(kz&&kz.dataset.bolge){const c=kz.closest('.card'),r=c&&rows.find(x=>'c_'+x.id===c.id);if(r)gvAc(r,kz.dataset.bolge.split(',').map(Number));return}
   const t=e.target.closest('[data-tog],[data-del],[data-retry],[data-zoom],[data-reparse],[data-copyocr],[data-recam],[data-regal],[data-f],[data-aktsil],[data-bildir],[data-bildirac],[data-devam],[data-claude],[data-onay]');if(!t)return;
   if(t.dataset.claude){const r=rows.find(x=>x.id===t.dataset.claude);if(r)claudeOku(r);return}
-  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);const k=checks(r).find(c=>!c.ok&&!c.info);toast(k?'Onaylandı, ama bir uyarı kaldı: '+k.m:'Onaylandı')}return}
+  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);ornekTopla([r]);const k=checks(r).find(c=>!c.ok&&!c.info);toast(k?'Onaylandı, ama bir uyarı kaldı: '+k.m:'Onaylandı')}return}
   if(t.dataset.devam){devId=t.dataset.devam;const i=$('#devam');i.value='';i.click();return}
   if(t.dataset.f){FLT.f=t.dataset.f;render();return}
   if(t.dataset.aktsil){const r=rows.find(x=>x.id===t.dataset.aktsil);r.akt=null;save(r);render();toast('Bir sonraki Luca dosyasına yeniden girecek');return}

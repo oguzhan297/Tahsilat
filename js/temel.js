@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=19;
+const APP_VER=20;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  20:['El yazısı örnekleri (Ayarlar): “Hepsi doğru”ya basınca ya da Luca’ya aktarınca, el yazılı makbuzların tarih, tutar ve numara bölgesi onayladığın değerle saklanır; 20 örnek birikince gelen kutusuna kendiliğinden gider. Okuyucu ileride bunlarla, makbuzları yazanların el yazısını tanıyacak şekilde eğitilecek. İstersen Ayarlar’dan kapatabilirsin.'],
   19:['Yeni “Firmalar” ekranı (ana ekrandaki düğme): uygulamanın tanıdığı firmaları görebilir, adını düzeltebilir, iki firmayı birleştirebilir, telefon ekleyip yanlış öğrenilmiş telefon ya da yazılışı silebilirsin. Ad değişince Luca’ya aktarılmamış makbuzlar da güncellenir.','Öğrenilen firmalar artık yedeğe de giriyor; yedekten yükleyince geri gelir.'],
   18:['Toplam ile nakit (tek ödeme türü) artık hep aynı: biri değişince öteki de değişir; okumada biri eksik okunduysa (62,25 ↔ 3.062,25 · 200 ↔ 6.200) büyüğü alınır','Eksik alanlarda firma da var: bilinen firmalardan seçebilirsin','6 aydan eski tarihte uyarı (yıl yanlış okunmuş olabilir)','Yeniden çekilen fotoğrafta eski kırpma görüntüleri kalmaz; yedekten yükleme tüm bilgileri geri getirir'],
   17:['Fotoğrafa dokununca tam ekran görüntüleyici: iki parmakla yakınlaştır, kaydır, çift dokun. Eksik alanlardaki küçük görüntüye dokununca o bölge büyütülmüş açılır','Eksik alanlardaki görüntüler daha geniş bölge gösterir','Bir-iki harfi yanlış okunan firma adı da tanınır; Ebru Avcı → “Ebru avcı”'],
