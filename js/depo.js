@@ -29,6 +29,8 @@ const sortRows=()=>rows.sort((a,b)=>((a.status==='done')-(b.status==='done'))||(
 async function load(){
   try{const all=await IDB.all('rows');rows=all.map(r=>({...r,status:'done',auto:r.auto||[],open:false}));
     // Firma adı tanımları güncellendiyse eski kartlara da uygula (yalnız elle değiştirilmemiş ve Luca'ya aktarılmamış kartlar)
+    for(const r of rows){const d=r.d||{};if(r.akt)continue;const e=evrakKisa(d.evrak_no);if(e===d.evrak_no)continue;
+      const ack=!d.aciklama||d.aciklama===r._ack;d.evrak_no=e;if(r.oku)r.oku.evrak_no=e;if(ack){d.aciklama=mkAck(d);r._ack=d.aciklama}save(r)}
     // yazımı düzeltilen firma: elle yazılmış olsa da (aktarılmamış kartlarda) yeni yazıma çevir
     for(const r of rows){const d=r.d||{},y=FIRMA_YENIAD[d.firma];if(r.akt||!y)continue;
       if(!d.aciklama||d.aciklama===r._ack||d.aciklama===d.firma){d.aciklama=d.aciklama===d.firma&&d.aciklama!==r._ack?y:(d.firma=y,mkAck(d));r._ack=d.aciklama}d.firma=y;if(r.oku&&FIRMA_YENIAD[r.oku.firma])r.oku.firma=y;save(r)}

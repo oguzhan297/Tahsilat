@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=10;
+const APP_VER=11;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  11:['Evrak no 6 haneden uzunsa yalnız son 6 hanesi yazılır','Okunan firma adları Türkçe harflerle yazılır (HEKİMOĞLU, TİCARET, DOĞAL…)'],
   10:['İs ra firmasının adı “is ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve ticaret anonim şirketi” olarak düzeltildi'],
   9:['Firma adı tanımları eski kartlara da uygulanır (elle değiştirmediğin ve Luca’ya aktarılmamış kartlar)'],
   8:['Deklanşör basıldığı anda çeker; çekim sırasında uygulama artık kendini yenilemez (kamera açıkken okuma bekler, daha az bellek)','Gönderdiğin makbuzlardaki 16 firmanın adı senin yazdığın şekilde kendiliğinden gelir','El yazısı tutarlarda okunan ile toplam çelişirse ikisi de turuncu işaretlenir'],
@@ -78,15 +79,32 @@ const FIRMA_YENIAD={'İs ra gıda ve ihtiyaç maddeleri pazarlama sanayi ve tica
 function birFark(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1||Math.min(a.length,b.length)<10)return false;let i=0,j=0,f=0;
   while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++f>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++}}
   return f+(a.length-i)+(b.length-j)<=1}
+// Okuyucu Türkçe harfleri çoğu zaman düz okur (HEKIMOGLU, TICARET): firma adını Türkçe yazımına çevir.
+// Önce sözlük (sık geçen ticari sözcükler ve firma adları), sonra ünlü uyumu: ince ünlüden (E, İ, Ö, Ü) sonra gelen I → İ.
+const TR_SOZ=Object.fromEntries(('HEKİMOĞLU SÜT ÜRÜNLERİ ÜRÜN ÜRÜNLER TİCARET TİC SANAYİ SANAYİİ SAN LİMİTED ŞİRKETİ ŞTİ İHTİYAÇ MADDELERİ GIDA LOJİSTİK '+
+  'YAZDOĞAN AYDOĞAN DOĞAN DOĞAL TÜTÜN MAMÜLLERİ MAMULLERİ MİZAH TEMİZLİK DAĞITIM DAĞ PAZARLAMA HAYVANCILIK İNŞAAT TURİZM NAKLİYE TEKSTİL '+
+  'GÜNEŞ İBRAHİM MÜHENDİSLİK PETROL DOĞALGAZ YENİGÜN ÜSTÜNTAŞ ÇAYCUMA ZONGULDAK KİLİMLİ BİLGİN MELİH İÇECEK ÜRETİM KOLLEKTİF ŞİRKET '+
+  'VETERİNER HİZMETLERİ HİZ VET İTHALAT İHRACAT ELEKTRİK ELEKTRONİK TOPTAN ÇİÇEK GÜLAY HASGÜLAY KARABÜK BARTIN').split(' ').map(w=>[w.replace(/[İIŞÇĞÜÖ]/g,c=>({İ:'I',I:'I',Ş:'S',Ç:'C',Ğ:'G',Ü:'U',Ö:'O'}[c])),w]));
+function trFirma(ad){if(!ad)return ad;
+  return String(ad).replace(/[A-Za-zÇĞİÖŞÜçğıöşüČ]+/g,w=>{if(/i/.test(w)&&w.replace(/i/g,'')===w.replace(/i/g,'').toUpperCase())w=w.replace(/i/g,'İ');   // okuyucu İ'yi küçük i okur: "iHTIYAC"
+    const W=w.toLocaleUpperCase('tr-TR').replace(/Č/g,'Ğ');
+    // yalnız büyük harfli (okuyucudan gelen) sözcükler; kullanıcının küçük harfle yazdığı ada dokunma
+    if(w!==w.toLocaleUpperCase('tr-TR')&&w!==w.toUpperCase())return w;
+    const k=W.replace(/[İIŞÇĞÜÖ]/g,c=>({İ:'I',I:'I',Ş:'S',Ç:'C',Ğ:'G',Ü:'U',Ö:'O'}[c]));
+    if(TR_SOZ[k])return TR_SOZ[k];
+    let on=null,o='';for(const c of W){if(c==='I'&&on==='ince')o+='İ';else o+=c;if(/[EİÖÜ]/.test(c)||(c==='I'&&on==='ince'))on='ince';else if(/[AIOU]/.test(c))on='kalin'}
+    return o})}
 function firmaAd(okunan,text){const tel=telNolar(text);
   for(const T of [FIRMA_TEL,FIRMA_TEL0])for(const t of tel){if(T[t])return T[t]}
   for(const T of [FIRMA_TEL,FIRMA_TEL0])for(const t of tel)for(const k in T)if(birFark(t,k))return T[k];
-  return FIRMA[nkey(okunan)]||FIRMA0[nkey(okunan)]||okunan}
+  return FIRMA[nkey(okunan)]||FIRMA0[nkey(okunan)]||trFirma(okunan)}
 function firmaOgren(okunan,dogru,text){if(!dogru)return false;let ok=false;
   if(okunan&&nkey(okunan)!==nkey(dogru)){FIRMA[nkey(okunan)]=dogru;ok=true}
   for(const t of telNolar(text)){FIRMA_TEL[t]=dogru;ok=true}
   try{localStorage.setItem('th_firma',JSON.stringify(FIRMA));localStorage.setItem('th_firma_tel',JSON.stringify(FIRMA_TEL))}catch(e){}
   return ok}
+// Evrak no: 6 haneden uzunsa yalnız son 6 karakter (harf/rakam; tire, boşluk sayılmaz). "F3528102026017" → "026017"
+function evrakKisa(v){const s=String(v??'').trim();const a=s.replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]/g,'');return a.length>6?a.slice(-6):s}
 const NUMK=FIELDS.filter(f=>f.t!=='text').map(f=>f.k);
 const LS='tahsilat_rows_v1';
 let rows=[];let queue=[],busy=false;

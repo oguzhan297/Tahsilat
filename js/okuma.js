@@ -17,7 +17,7 @@ function applyParse(r,text,pre){
   const res=pre||(ps.length>1?TParse.merge(ps.map(p=>TParse.parse(p))):TParse.parse(text));const d=res.d;
   const keepAck=r.d&&r.d.aciklama&&r.d.aciklama!==r._ack?r.d.aciklama:null;
   d.not=res.notes.join(' · ');if(!(res.makbuz&&res.found>=2))d.makbuz_mu=false;
-  r.okuFirma=d.firma;d.firma=firmaAd(d.firma,text);
+  r.okuFirma=d.firma;d.firma=firmaAd(d.firma,text);d.evrak_no=evrakKisa(d.evrak_no);
   r.el=!!res.el;r.onay=false;
   r.ocr=text;r.auto=fill(d);
   d.aciklama=keepAck||mkAck(d);if(!keepAck)r._ack=d.aciklama;
@@ -42,7 +42,7 @@ async function extract(r){
     for(const k of ['toplam','cek','kart','nakit','diger'])if(d[k]===0)d[k]=null;
     if(j.makbuz_mu===false)d.makbuz_mu=false;d.tarih=normDate(d.tarih);
     if(j.yazi_metin&&d.yazi!=null)d.not=[d.not,'Yazıyla: '+String(j.yazi_metin).trim()].filter(Boolean).join(' · ');
-    r.okuFirma=d.firma;d.firma=firmaAd(d.firma);r.el=j.tur==='el_yazisi';r.onay=false;r.ocr=null;
+    r.okuFirma=d.firma;d.firma=firmaAd(d.firma);d.evrak_no=evrakKisa(d.evrak_no);r.el=j.tur==='el_yazisi';r.onay=false;r.ocr=null;
     r.auto=fill(d);d.aciklama=mkAck(d);r._ack=d.aciklama;
     r.d=d;r.unsure=Array.isArray(j.belirsiz)?j.belirsiz.filter(k=>FIELDS.some(f=>f.k===k)):[];r.akt=null;r.oku=okunanAnlik(d);
     r.status='done';r.open=true;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;delete r._api;

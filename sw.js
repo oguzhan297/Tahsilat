@@ -1,10 +1,10 @@
 // Uygulamayı internetsiz de açılabilir yapar. Sürüm değişince eski önbellek silinir.
-const V='tahsilat-v10';
+const V='tahsilat-v11';
 // PaddleOCR (paddle.js, ONNX Runtime, modeller) büyük dosyalar: ayrı önbellekte durur, uygulama sürümü değişince silinmez.
 // Önbellek adı Z Raporu uygulamasıyla ortak (aynı adres: oguzhan297.github.io) → modeller iki uygulama için bir kez iner.
 const OCR='zrapor-ocr-1';
 const isOcr=u=>u.hostname==='paddle-model-ecology.bj.bcebos.com'||(u.hostname==='cdn.jsdelivr.net'&&u.pathname.startsWith('/npm/onnxruntime-web@'))||(u.origin===self.location.origin&&u.pathname.endsWith('/paddle.js'));
-const SHELL=['./','./index.html','./css/uygulama.css?v=10','./js/parser.js?v=10','./js/goruntu.js?v=10','./js/paddle-worker.js?v=10','./js/temel.js?v=10','./js/depo.js?v=10','./js/ayarlar.js?v=10','./js/kontrol.js?v=10','./js/kalite.js?v=10','./js/arayuz.js?v=10','./js/okuyucu-claude.js?v=10','./js/okuyucu-tesseract.js?v=10','./js/okuyucu-paddle.js?v=10','./js/okuma.js?v=10','./js/disari.js?v=10','./js/baslat.js?v=10','./ikon.svg?v=10','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
+const SHELL=['./','./index.html','./css/uygulama.css?v=11','./js/parser.js?v=11','./js/goruntu.js?v=11','./js/paddle-worker.js?v=11','./js/temel.js?v=11','./js/depo.js?v=11','./js/ayarlar.js?v=11','./js/kontrol.js?v=11','./js/kalite.js?v=11','./js/arayuz.js?v=11','./js/okuyucu-claude.js?v=11','./js/okuyucu-tesseract.js?v=11','./js/okuyucu-paddle.js?v=11','./js/okuma.js?v=11','./js/disari.js?v=11','./js/baslat.js?v=11','./ikon.svg?v=11','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 // cache:'reload' → tarayıcının kendi önbelleğindeki eski kopyayı değil, sunucudaki güncel dosyayı al
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,u.startsWith('http')?{mode:'no-cors'}:{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()))});

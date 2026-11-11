@@ -133,6 +133,7 @@ document.addEventListener('change',e=>{
   if(!r||!f)return;
   r.d[f.k]=f.t==='text'?i.value.trim():pn(i.value);
   if(f.k==='tarih')r.d.tarih=normDate(r.d.tarih);
+  if(f.k==='evrak_no')r.d.evrak_no=evrakKisa(r.d.evrak_no);
   if(f.k==='firma'&&r.d.firma&&nkey(r.okuFirma||'')!==nkey(r.d.firma)&&firmaOgren(r.okuFirma,r.d.firma,r.ocr)){toast('Firma adı öğrenildi; sonraki makbuzlarda kendiliğinden gelir')}
   if(f.t==='num'&&r.d[f.k]===0&&f.k!=='yazi')r.d[f.k]=null;
   if(f.t==='num'&&i.value.trim()!==''&&r.d[f.k]==null)toast('Sayı anlaşılamadı: '+i.value);
