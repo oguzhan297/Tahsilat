@@ -62,6 +62,7 @@ function render(){
     return `<div class="card${r.open?' open':''}" id="c_${r.id}">
       <div class="head" data-tog="${r.id}">${headHTML(r)}</div>
       <div class="body">
+        ${hizliHTML(r)}
         ${r.thumb?`<img class="big" src="${r.thumb}" data-zoom alt="Makbuz fotoğrafı (dokun: büyüt)">`:''}
         ${r.src==='foto'||r.hasImg?`<div class="devam">${(r.sayfa||1)>1?`${ik('sayfa')}${r.sayfa} fotoğraftan birlikte okundu · `:''}<button class="lnk" data-devam="${r.id}">${ik('arti')}Makbuz uzunsa devamını ekle</button>${S.key&&S.mode!=='api'?` · <button class="lnk" data-claude="${r.id}">${ik('kalem')}Claude ile oku</button>`:''}</div>`:''}
         ${kaliteHTML(r)}
@@ -74,6 +75,7 @@ function render(){
       </div></div>`;
   }).join('');
   renderSum();
+  for(const r of rows)if(r.open&&r.status==='done')kirpDoldur(r);
 }
 function payKinds(d){const a=[];if(d.nakit)a.push('Nakit');if(d.kart)a.push('Kart');if(d.cek)a.push('Çek');if(d.diger)a.push('Diğer');return a.join(' + ')}
 function headHTML(r){const bad=isBad(r),d=r.d;return `${r.thumb?`<img class="thumb" src="${r.thumb}">`:`<div class="thumb empty">${ik(r.src==='foto'?'kamera':r.src==='metin'?'metin':'kalem')}</div>`}
@@ -97,11 +99,41 @@ function renderSum(){
   $('#sum').innerHTML=`<div class="s1"><b>${done.length}</b> makbuz · ${yeni===done.length?'hepsi yeni':yeni?`<b class="yeni">${yeni} yeni</b>`:'hepsi aktarıldı'}</div><div class="s2"><b>${fm(t('toplam'))}</b> <span>toplam</span></div>`;
   $('#xlsx').disabled=!done.length;$('#csv').disabled=!done.length;$('#copy').disabled=!done.length;
 }
+// ---- Eksik alanlar: turuncu tarih / evrak no / tutar kartın en üstünde, yanında makbuzun o kısmı büyütülmüş ----
+const HZ_TUTAR=['toplam','nakit','kart','cek'];
+function hizliAlanlar(r){const u=r.unsure||[],a=[];if(u.includes('tarih')||!r.d.tarih)a.push('tarih');if(u.includes('evrak_no')||!r.d.evrak_no)a.push('evrak_no');if(HZ_TUTAR.some(k=>u.includes(k))||!r.d.toplam)a.push('tutar');return a}
+function hizliHTML(r){const a=hizliAlanlar(r);if(!a.length||r.src==='elle'&&!r.thumb&&!r.hasImg)return '';
+  const ad={tarih:'Tarih',evrak_no:'Evrak no',tutar:'Tutar'},ank={tarih:'tarih',evrak_no:'no',tutar:'tutar'};
+  const giris=k=>k==='tutar'?`<input class="hz" data-hizli="tutar" data-id="${r.id}" inputmode="decimal" enterkeyhint="next" placeholder="ör. 4230" value="${esc(fm(r.d.toplam))}">`
+    :k==='tarih'?`<input class="hz" data-id="${r.id}" data-k="tarih" inputmode="numeric" enterkeyhint="next" placeholder="ör. 2310 → 23.10" value="${esc(r.d.tarih||'')}">`
+    :`<input class="hz" data-id="${r.id}" data-k="evrak_no" enterkeyhint="next" placeholder="makbuz no" value="${esc(r.d.evrak_no||'')}">`;
+  return `<section class="hizli"><div class="hz-h">${ik('kalem')}Eksik alanlar <span>— fotoğrafa bakıp yaz, “ileri” ile sonrakine geç</span></div>
+    ${a.map(k=>`<div class="hz-s" data-hzalan="${k}">${r.ank&&(r.ank[ank[k]]||k==='evrak_no'&&r.ank.tarih)?`<img class="hz-k" data-kirp="${k}" alt="">`:''}<label>${ad[k]}</label>${giris(k)}</div>`).join('')}
+    <div class="set-row" style="justify-content:flex-end"><button class="btn small" data-onay="${r.id}">Hepsi doğru</button></div></section>`}
+// Kırpma: makbuzun aslı (saklıysa) ya da küçük kopyası; etiketin sağı ve altı (değer çoğu formda sağda, bazılarında altta)
+async function kirpDoldur(r){const c=document.getElementById('c_'+r.id);if(!c||!r.ank)return;const im=[...c.querySelectorAll('img[data-kirp]')].filter(i=>!i.src);if(!im.length)return;
+  r._kirp=r._kirp||{};
+  if(!r._kaynak){try{let b=null;if(r.hasOrig){const o=await IDB.get('orig',r.id);if(o&&o[0])b=o[0]}const src=b?URL.createObjectURL(b):r.thumb||(r.hasImg?await IDB.get('imgs',r.id):null);if(!src)return;
+    r._kaynak=await new Promise((a,h)=>{const i=new Image();i.onload=()=>a(i);i.onerror=h;i.src=src})}catch(e){return}}
+  const I=r._kaynak,W=I.naturalWidth,H=I.naturalHeight;
+  for(const el of im){const k=el.dataset.kirp;if(!r._kirp[k]){const L=r.ank[{tarih:'tarih',evrak_no:'no',tutar:'tutar'}[k]]||(k==='evrak_no'&&r.ank.tarih);if(!L)continue;const h=Math.max(.012,L[3]-L[1]);
+      const b=k==='tutar'?[L[0]-.03,L[1]-h*1.2,1,L[3]+h*2.8]:k==='tarih'?[L[0]-.02,L[1]-h*1.4,Math.min(1,L[0]+Math.max(.45,(L[2]-L[0])*5)),L[3]+h*1.4]:[L[0]-.03,L[1]-h,Math.min(1,L[0]+.42),L[3]+h];
+      const x0=Math.max(0,b[0])*W,y0=Math.max(0,b[1])*H,x1=Math.min(1,b[2])*W,y1=Math.min(1,b[3])*H;if(x1-x0<10||y1-y0<10)continue;
+      const s=Math.min(1.5,800/(x1-x0)),cv=document.createElement('canvas');cv.width=Math.round((x1-x0)*s);cv.height=Math.round((y1-y0)*s);
+      cv.getContext('2d').drawImage(I,x0,y0,x1-x0,y1-y0,0,0,cv.width,cv.height);r._kirp[k]=cv.toDataURL('image/jpeg',.85);cv.width=cv.height=1}
+    if(r._kirp[k])el.src=r._kirp[k]}}
+// "ileri" (Enter): sonraki eksik alana geç; sonuncudaysa klavyeyi kapat
+// dokununca içindeki okunan değer seçili gelsin: yazınca yerine geçer
+document.addEventListener('focusin',e=>{const i=e.target;if(i.classList&&i.classList.contains('hz'))setTimeout(()=>{try{i.select()}catch(x){}},0)});
+document.addEventListener('keydown',e=>{const i=e.target;if(e.key!=='Enter'||!i.classList||!i.classList.contains('hz'))return;e.preventDefault();
+  const hs=[...i.closest('.hizli').querySelectorAll('input.hz')],n=hs[hs.indexOf(i)+1];if(n){n.focus();try{n.select()}catch(x){}}else i.blur()});
 function refreshCard(r){
   const c=document.getElementById('c_'+r.id);if(!c){renderSum();return}   // süzgeç yüzünden ekranda olmayan kart: baştan çizme (yazılan kutu silinir, klavye kapanır)
   c.querySelector('.head').innerHTML=headHTML(r);
   c.querySelector('.checks').innerHTML=checksHTML(r);
   {const bk=c.querySelector('.bildirkutu');if(bk){bk.querySelector('.dzb').innerHTML=duzBaslik(r);bk.querySelector('.dzd').innerHTML=duzDurum(r);if(duzeltilen(r).length)bk.hidden=false}}
+  {const hz=c.querySelector('.hizli');if(hz){const a=hizliAlanlar(r);hz.querySelectorAll('.hz-s').forEach(x=>x.classList.toggle('tamam',!a.includes(x.dataset.hzalan)));
+    const t=hz.querySelector('input[data-hizli="tutar"]');if(t&&t!==document.activeElement)t.value=fm(r.d.toplam)}}
   c.querySelectorAll('input[data-k]').forEach(i=>{const f=FIELDS.find(x=>x.k===i.dataset.k);if(i!==document.activeElement)i.value=fv(f,r.d[f.k]);i.classList.toggle('unsure',!!(r.unsure&&r.unsure.includes(f.k)));i.classList.toggle('calc',!!(r.auto&&r.auto.includes(f.k)))});
   renderSum();
 }
@@ -128,7 +160,16 @@ document.addEventListener('click',e=>{
   if(t.dataset.retry){const r=rows.find(x=>x.id===t.dataset.retry);r.status='queued';queue.push(r);render();pump()}
 });
 document.addEventListener('change',e=>{
-  const i=e.target;if(!i.dataset||!i.dataset.k)return;
+  const i=e.target;
+  if(i.dataset&&i.dataset.hizli==='tutar'){const r=rows.find(x=>x.id===i.dataset.id);if(!r)return;const v=pn(i.value);
+    if(i.value.trim()&&v==null){toast('Sayı anlaşılamadı: '+i.value);return}
+    const y0=i.getBoundingClientRect().top,p=PAY.filter(k=>r.d[k]!=null&&!(r.auto||[]).includes(k));
+    r.d.toplam=v||null;for(const k of PAY)if((r.auto||[]).includes(k))r.d[k]=null;if(p.length===1)r.d[p[0]]=v||null;r.auto=fill(r.d,[]);
+    r.unsure=(r.unsure||[]).filter(k=>!HZ_TUTAR.includes(k));i.value=fm(r.d.toplam);
+    if(r.akt){r.akt=null;toast('Makbuz değişti: bir sonraki Luca dosyasına yeniden girecek')}
+    save(r);rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI();
+    const dy=i.getBoundingClientRect().top-y0;if(Math.abs(dy)>1)window.scrollBy(0,dy);return}
+  if(!i.dataset||!i.dataset.k)return;
   const r=rows.find(x=>x.id===i.dataset.id);const f=FIELDS.find(x=>x.k===i.dataset.k);
   if(!r||!f)return;
   r.d[f.k]=f.t==='text'?i.value.trim():pn(i.value);

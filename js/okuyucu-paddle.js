@@ -51,7 +51,7 @@ function isciMotoru(f){
     gonder({t:'init',det:f.det,rec:f.rec,wasm:f.wasm,wasmDir:f.wasmDir,detName:PADDLE.det,recName:PADDLE.rec},[f.det,f.rec,f.wasm]).then(()=>{clearTimeout(zm);
       ok({tur:'isci',olu:()=>olu,
         async resim(id,src){const bmp=await fotoBitmap(src);await gonder({t:'img',id,bmp},[bmp])},
-        async oku(id,src,opt){return (await gonder({t:'read',id,opt,params:opt.p||{}})).items},
+        async oku(id,src,opt){const r=await gonder({t:'read',id,opt,params:opt.p||{}});const it=r.items||[];it.w=r.w;it.h=r.h;return it},
         birak(id){gonder({t:'free',id}).catch(()=>{})}})},er=>{clearTimeout(zm);bitir(er);no(er)});
   });
 }
@@ -64,7 +64,7 @@ async function anaMotor(f){
       ortOptions:{backend:'wasm',wasmPaths:f.wasmDir,numThreads:self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1}})}
   finally{URL.revokeObjectURL(dU);URL.revokeObjectURL(rU)}
   return {tur:'ana',olu:()=>false,async resim(){},
-    async oku(id,src,opt){await new Promise(a=>setTimeout(a,30));const img=await prepImage(src,opt);const [out]=await ocr.predict(img,opt.p||{});img.width=img.height=1;return out&&out.items||[]},
+    async oku(id,src,opt){await new Promise(a=>setTimeout(a,30));const img=await prepImage(src,opt);const [out]=await ocr.predict(img,opt.p||{});const it=out&&out.items||[];it.w=img.width;it.h=img.height;img.width=img.height=1;return it},
     birak(){}};
 }
 async function getPaddle(onProg){
@@ -82,6 +82,17 @@ async function getPaddle(onProg){
   })().finally(()=>{pdlLoading=null});
   return pdlLoading;
 }
+// Elle tamamlama için: "Tarih", "Nakit / Toplam / Tutar" etiketlerinin fotoğraftaki yeri (0–1 oranında [x0,y0,x1,y1])
+function ankBul(items){if(!items||!items.w)return null;const W=items.w,H=items.h,out={},puan={};
+  const F=s=>String(s||'').toLocaleUpperCase('tr-TR').replace(/[İI]/g,'I').replace(/Ş/g,'S').replace(/Ç/g,'C').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O');
+  // kutu uzun bir satırsa etiketin satır içindeki yerini harf sırasından tahmin et
+  const kutu=(i,at,len)=>{const xs=i.poly.map(p=>p[0]),ys=i.poly.map(p=>p[1]);let x0=Math.min(...xs),x1=Math.max(...xs);const n=String(i.text||'').length||1;
+    if(at>0&&n>len+3){const w=x1-x0;x0+=w*at/n}return [x0/W,Math.min(...ys)/H,x1/W,Math.max(...ys)/H]};
+  const KAL=[['tarih',/TA[RN]I[HBN]|TANIH/,1],['tutar',/\bNAKIT\b/,1],['tutar',/TOPLAM(?!\s?CAR)|YEKUN/,2],['tutar',/TAHSIL\s?ED/,3],['tutar',/\bTUTAR/,4],
+    ['no',/№|(^|\s)N[O°º2]?\s?0\d{3,}|\bSIRA\b|\bSERI\s?[A-Z]\b|MAKBUZ\s?NO|EVRAK\s?NO/,1]];
+  for(const i of items){if(!i.poly||!i.poly.length)continue;const t=F(i.text);if(/BAKIYE|KALAN|CEK\s?NO|HESAP|\bCAD\b|\bSK\b|\bMAH\b|TEL\b/.test(t)&&!/TARIH|NAKIT|SIRA|№/.test(t))continue;
+    for(const [k,re,p] of KAL){const m=t.match(re);if(!m||(puan[k]&&puan[k]<=p))continue;out[k]=kutu(i,m.index,m[0].length);puan[k]=p}}
+  return Object.keys(out).length?out:null}
 // PaddleOCR kutularını satırlara diz: eğikliği düzelt, aynı yükseklikteki kutuları soldan sağa birleştir
 function paddleLines(items){
   const N=s=>String(s).normalize('NFKC').replace(/[ÍÌ]/g,'İ').replace(/[íì]/g,'i').trim();
@@ -118,7 +129,7 @@ async function extractPaddle(r,ikinci){
     try{
       for(let n=0;n<passes.length;n++){
         etiket=n?`Emin olunamadı, tekrar okunuyor (${n+1}/${passes.length})…`:'Okunuyor (PaddleOCR)…';setProg(r,etiket);
-        const sm=[];for(let i=0;i<ps.length;i++)sm.push(paddleLines(await motor.oku(sid(i),ps[i],passes[n])));
+        const sm=[];for(let i=0;i<ps.length;i++){const it=await motor.oku(sid(i),ps[i],passes[n]);if(n===0&&i===0)r.ank=ankBul(it);sm.push(paddleLines(it))}
         const text=birlestir(sm);
         const res=TParse.parse(text),sc=TParse.consistency(res);
         all.push(res);texts.push(text);

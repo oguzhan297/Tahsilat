@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=15;
+const APP_VER=16;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  16:['El yazısı makbuzlarda “Eksik alanlar”: turuncu tarih / evrak no / tutar kartın en üstünde, yanında makbuzun o kısmı büyütülmüş','Kısa yazım: 2310 → 23.10.2026; dokununca okunan değer seçili gelir, “ileri” sonraki alana geçer','Telefon numarasından tanınan firma artık şüpheli sayılmaz'],
   15:['Koçan makbuzlarda bitişik okunan seri no (N000321) ve el yazısı tarih (Tarih 12/10/2026) okunur','“Yalnız” satırı bozuk okunsa da tutarın yazılışıyla karşılaştırılır; uyuşursa tutar turuncu gelmez'],
   14:['“Seri A 884435” gibi seri + sıra numaraları evrak no olarak okunur','Ayraçları bozuk okunan tarihler (13,1012026 · 27.10.12026) okunur','“Yalnız: TL. 10530.00” satırındaki rakam tutar olarak kullanılır; ondalığı kaybolan okuma (105300) düzeltilir'],
   12:['Kamerada çerçeve Dikey / Yatay seçilebilir (üstteki düğme; seçimin hatırlanır). Yatay: koçan makbuzlar için ekran genişliğinde çerçeve','Fotoğraf yalnız çerçevenin içinden alınır: yandaki makbuz, masa, klavye okumaya karışmaz'],
@@ -49,6 +50,10 @@ function refill(r,key){
 }
 function normDate(s){
   s=String(s||'').trim();let m;
+  if(/^\d{3,8}$/.test(s)){const y0=new Date().getFullYear(),g=s.length%2?'0'+s:s;   // yalnız rakam: "2310" → 23.10.<bu yıl> (ileri tarih olursa geçen yıl)
+    if(g.length===4){const t=new Date(y0,+g.slice(2,4)-1,+g.slice(0,2));return `${g.slice(0,2)}.${g.slice(2,4)}.${t>new Date(Date.now()+864e5)?y0-1:y0}`}
+    if(g.length===6)return `${g.slice(0,2)}.${g.slice(2,4)}.20${g.slice(4,6)}`;if(g.length===8)return `${g.slice(0,2)}.${g.slice(2,4)}.${g.slice(4)}`}
+  s=s.replace(/\s+/g,'.');
   if(m=s.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/))return `${m[3].padStart(2,'0')}.${m[2].padStart(2,'0')}.${m[1]}`;
   if(m=s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/))return `${m[1].padStart(2,'0')}.${m[2].padStart(2,'0')}.${m[3].length===2?'20'+m[3]:m[3]}`;
   if(m=s.match(/^(\d{1,2})[./-](\d{1,2})$/))return `${m[1].padStart(2,'0')}.${m[2].padStart(2,'0')}.${new Date().getFullYear()}`;   // "23.10" → bu yıl

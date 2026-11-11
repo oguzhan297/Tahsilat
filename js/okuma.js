@@ -22,6 +22,7 @@ function applyParse(r,text,pre){
   r.ocr=text;r.auto=fill(d);
   d.aciklama=keepAck||mkAck(d);if(!keepAck)r._ack=d.aciklama;
   r.d=d;r.unsure=res.unsure.filter(k=>FIELDS.some(f=>f.k===k));
+  if(d.firma&&d.firma!==r.okuFirma)r.unsure=r.unsure.filter(k=>k!=='firma');   // firma tanımlı/öğrenilmiş addan (telefon ya da ad eşleşmesi) geldi
   if(r.unsure.some(k=>k==='toplam'||PAY.includes(k)))for(const k of r.auto)if(!r.unsure.includes(k))r.unsure.push(k);   // şüpheli tutardan hesaplanan alan da şüpheli
   r.akt=null;r.oku=okunanAnlik(d);   // yeni okuma: henüz aktarılmadı; okunan değerler hata bildirimi için saklanır
 }

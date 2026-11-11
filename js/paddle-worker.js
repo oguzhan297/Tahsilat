@@ -3,7 +3,7 @@
 // her okuma geçişinde yalnız ayarları yollar; buradan sadece bulunan metin kutuları (poly, text, score) döner.
 // vendor/paddle.js değişince ?p= elle; goruntu.js ?v= değerini arac/surum.mjs günceller.
 import '../vendor/paddle.js?p=2';
-import './goruntu.js?v=15';
+import './goruntu.js?v=16';
 
 const L = globalThis.PaddleOCRLib, G = globalThis.ZGoruntu;
 let ocr = null, cv = null;
@@ -29,11 +29,11 @@ onmessage = async e => {
       cevap({ ok: true });
     } else if (m.t === 'read') {
       const f = foto.get(m.id); if (!f) throw new Error('Fotoğraf işçide yok');
-      const c = G.prep(f.C, m.opt), x = c.getContext('2d');
+      const c = G.prep(f.C, m.opt), x = c.getContext('2d'), gw = c.width, gh = c.height;
       const mat = cv.matFromImageData(x.getImageData(0, 0, c.width, c.height));
       c.width = c.height = 1;
       let r; try { [r] = await ocr.predict(mat, m.params || {}); } finally { mat.delete(); }
-      cevap({ ok: true, items: (r && r.items || []).map(i => ({ poly: i.poly, text: i.text, score: i.score })) });
+      cevap({ ok: true, w: gw, h: gh, items: (r && r.items || []).map(i => ({ poly: i.poly, text: i.text, score: i.score })) });
     } else if (m.t === 'free') {
       const f = foto.get(m.id); if (f && f.C.im.close) f.C.im.close(); foto.delete(m.id);
       cevap({ ok: true });
