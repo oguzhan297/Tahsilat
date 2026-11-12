@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=23;
+const APP_VER=24;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  24:['Okurken kaydırınca uygulamanın kapanması: listede küçük resimler, okunan fotoğraflar bellekten bırakılıyor, büyük fotoğraflar küçültülüyor','Uygulama okurken kapanırsa çektiğin fotoğraflar kaybolmaz; yeniden açınca okuma sürer','Kartta Hata bildir düğme olarak'],
   23:['Hata bildirimi daha hızlı gider','Alt çubuk (Luca CSV) artık kaybolmaz','Tarih alanında sayı klavyesi (2310 → 23.10)'],
   22:['Okuyucu (PaddleOCR) kendiliğinden iner; ekran kapanıp yarıda kalırsa uygulamaya dönünce kaldığı yerden sürer, indirirken ekran açık tutulur','Arka arkaya çekimde sol alttaki küçük resme dokununca uygulama kapanmaz; kamera kapanıp listeye döner','Okunan makbuzların kartları kapalı gelir; görmek istediğine dokunup açarsın','Çok makbuzla daha hızlı açılış; uzun seride makbuzlar arasında kısa ara (telefon daha az ısınır)'],
   21:['Deklanşöre basınca çekildiği artık hep belli: beyaz parlama, çerçeve ve düğme nabzı; iPhone’da (iOS 18 ve sonrası) hafif titreşim. “Fotoğraf çek”te parlama önceden hiç görünmüyordu, düzeltildi.','Arka arkaya taramada deklanşör önceki fotoğraf kaydedilirken kilitlenmiyor; hızlı basışlar kaçmıyor.'],

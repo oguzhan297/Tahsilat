@@ -57,8 +57,8 @@ function render0(){
   if(!rows.length){L.innerHTML='<div class="empty-state">Henüz makbuz yok.<br>Yukarıdan fotoğraf çekerek başla.</div>'}
   else if(!goster.length){L.innerHTML='<div class="empty-state">Bu aramaya / süzgece uyan makbuz yok.</div>'}
   else L.innerHTML=goster.map(r=>{
-    if(r.status==='work'||r.status==='queued') return `<div class="card" id="c_${r.id}"><div class="head">${r.thumb?`<img class="thumb" src="${r.thumb}">`:'<div class="thumb empty"></div>'}<div class="meta"><div class="t1">${r.status==='work'?'Okunuyor…':'Sırada…'}</div><div class="t2">${esc(r.prog||'Makbuz inceleniyor')}</div></div><div class="spin"></div></div></div>`;
-    if(r.status==='error') return `<div class="card"><div class="head">${r.thumb?`<img class="thumb" src="${r.thumb}">`:'<div class="thumb empty"></div>'}<div class="meta"><div class="t1" style="color:var(--err)">Okunamadı</div><div class="t2">${esc(r.err)}</div></div><button class="btn small" data-retry="${r.id}" ${r.blob||r.file?'':'disabled'}>Tekrar</button><button class="btn small danger" data-del="${r.id}">Sil</button></div></div>`;
+    if(r.status==='work'||r.status==='queued') return `<div class="card" id="c_${r.id}"><div class="head">${r.mini?`<img class="thumb" src="${r.mini}">`:'<div class="thumb empty"></div>'}<div class="meta"><div class="t1">${r.status==='work'?'Okunuyor…':'Sırada…'}</div><div class="t2">${esc(r.prog||'Makbuz inceleniyor')}</div></div><div class="spin"></div></div></div>`;
+    if(r.status==='error') return `<div class="card"><div class="head">${r.mini?`<img class="thumb" src="${r.mini}">`:'<div class="thumb empty"></div>'}<div class="meta"><div class="t1" style="color:var(--err)">Okunamadı</div><div class="t2">${esc(r.err)}</div></div><button class="btn small" data-retry="${r.id}" ${r.blob||r.file?'':'disabled'}>Tekrar</button><button class="btn small danger" data-del="${r.id}">Sil</button></div></div>`;
     let g='',inSec=false;
     for(const f of FIELDS){
       if(f.sec){if(inSec)g+='</div></section>';g+=`<section class="grp${f.x?' grp-x':''}"><div class="grp-h">${secHTML(f.sec)}</div><div class="grid">`;inSec=true}
@@ -77,14 +77,14 @@ function render0(){
         ${r.ocr!=null?`<details class="ocr"><summary>Okunan metin (düzeltip yeniden okutabilirsin)</summary><textarea rows="10" data-ocr="${r.id}">${esc(r.ocr)}</textarea><div class="set-row"><button class="btn small" data-copyocr="${r.id}">${ik('kopya')}Kopyala</button><button class="btn small" data-reparse="${r.id}">Metne göre yeniden oku</button></div></details>`:''}
         ${r.akt?`<div class="aktbar">✓ ${aktTarih(r.akt,1)} tarihinde Luca dosyasına aktarıldı. <button class="btn small" data-aktsil="${r.id}">Aktarılmadı yap</button></div>`:''}
         ${bildirKutuHTML(r)}
-        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="lnk bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>`:''}
+        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="btn small bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>`:''}
       </div></div>`;
   }).join('');
   renderSum();
   for(const r of rows)if(r.open&&r.status==='done')kirpDoldur(r);
 }
 function payKinds(d){const a=[];if(d.nakit)a.push('Nakit');if(d.kart)a.push('Kart');if(d.cek)a.push('Çek');if(d.diger)a.push('Diğer');return a.join(' + ')}
-function headHTML(r){const bad=isBad(r),d=r.d;return `${r.thumb?`<img class="thumb" src="${r.thumb}">`:`<div class="thumb empty">${ik(r.src==='foto'?'kamera':r.src==='metin'?'metin':'kalem')}</div>`}
+function headHTML(r){const bad=isBad(r),d=r.d;return `${r.mini?`<img class="thumb" src="${r.mini}">`:`<div class="thumb empty">${ik(r.src==='foto'?'kamera':r.src==='metin'?'metin':'kalem')}</div>`}
         <div class="meta"><div class="t1"><span class="tt">${esc(d.firma||'Firma yok')}</span></div>
         <div class="t2">${r.akt?`<span class="akt" title="Luca dosyasına aktarıldı">✓ Luca ${aktTarih(r.akt)}</span> `:''}${r.el?'<span class="elrozet">El yazısı</span> ':''}${esc(d.tarih||'Tarih yok')} · No ${esc(d.evrak_no||'—')}${payKinds(d)?' · '+payKinds(d):''}</div></div>
         <div class="amt">${fm(d.toplam)||'—'}<span class="badge ${bad?'b-warn':'b-ok'}">${bad?'Kontrol et':'Tamam'}</span></div>`}
@@ -204,7 +204,7 @@ document.addEventListener('click',e=>{
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('Okunan metin kopyalandı')).catch(()=>{try{ta.focus();ta.select();ta.setSelectionRange(0,txt.length);const ok=document.execCommand('copy');toast(ok?'Okunan metin kopyalandı':'Kopyalanamadı — metne uzun basıp “Tümünü Seç”')}catch(x){toast('Kopyalanamadı')}});return}
   if(t.dataset.reparse){const r=rows.find(x=>x.id===t.dataset.reparse);const ta=document.querySelector(`[data-ocr="${r.id}"]`);applyParse(r,ta.value);r.open=true;save(r);render();toast('Metin yeniden okundu');return}
   if(t.dataset.zoom!==undefined){const r=rows.find(x=>x.id===t.dataset.zoom);if(r)gvAc(r);return}
-  if(t.dataset.tog){const r=rows.find(x=>x.id===t.dataset.tog);r.open=!r.open;if(r.open)loadImg(r);render();if(r.open)document.getElementById('c_'+r.id)?.scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(t.dataset.tog){const r=rows.find(x=>x.id===t.dataset.tog);r.open=!r.open;if(r.open)loadImg(r);else if(r.hasImg&&r.status==='done'&&!String(r.thumb||'').startsWith('blob:'))r.thumb=null;/* kapanan kartın büyük fotoğrafı bellekte kalmasın */render();if(r.open)document.getElementById('c_'+r.id)?.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(t.dataset.del){
     if(t.dataset.armed!=='1'){t.dataset.armed='1';t.textContent='Emin misin?';setTimeout(()=>{if(t.isConnected){t.dataset.armed='';t.textContent='Sil'}},3000);return}
     removeRows(rows.filter(x=>x.id===t.dataset.del));return}
