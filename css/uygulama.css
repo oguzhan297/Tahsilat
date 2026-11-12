@@ -182,8 +182,8 @@ body.kamera-acik{overflow:hidden}
 .k-dek:active{background:#fff}.k-dek:disabled{opacity:.5}
 .k-isik{width:52px;height:52px;border-radius:50%;border:0;background:rgba(15,23,42,.7);font-size:22px}.k-isik.on{background:#fbbf24}
 .k-isik[hidden]{visibility:hidden;display:block}
-.k-flas{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}.k-flas.on{animation:flas .25s ease-out}
-@keyframes flas{from{opacity:.7}to{opacity:0}}
+.k-flas{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5;will-change:opacity}.k-flas.on{animation:flas .4s ease-out}
+@keyframes flas{0%{opacity:.9}35%{opacity:.6}100%{opacity:0}}
 
 /* ================= Liquid Glass katmanı (Apple iOS 26 tarzı) =================
    Cam yüzey: yarı saydam dolgu + arkayı bulanıklaştırma + üst kenarda ışık çizgisi + ince açık kenarlık.
@@ -367,3 +367,9 @@ body.gv-acik{overflow:hidden}
 .fm-c button:active{background:rgba(239,68,68,.2);color:#fca5a5}
 .ornsec{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;margin:2px 0 4px;cursor:pointer}
 .ornsec input{width:18px;height:18px;accent-color:#10b981}
+/* çekim işareti: çerçeve ve deklanşör nabzı; iOS dokunuş titreşimi için görünmez anahtar */
+.k-cerceve.cek{animation:cekcer .5s ease-out}
+@keyframes cekcer{0%{border-color:#fff;border-width:6px;box-shadow:0 0 0 100vmax rgba(255,255,255,.35),0 0 30px 6px #fff inset}100%{border-width:2px}}
+.k-dek.cek{animation:cekdek .35s ease-out}
+@keyframes cekdek{0%{transform:scale(.86);background:#fff}100%{transform:scale(1)}}
+.k-hap{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;left:-9px}

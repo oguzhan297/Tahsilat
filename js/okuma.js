@@ -181,24 +181,32 @@ $('#tekcek').onclick=()=>kameraAc('tek');
 $('#kyerel').onclick=()=>{KAM.sayi=0;kameraKapat();yerelKamera()};   // en yüksek çözünürlük: telefonun kendi kamerası
 $('#kbitti').onclick=kameraKapat;
 $('#kisik').onclick=async()=>{const tr=KAM.akis&&KAM.akis.getVideoTracks()[0];if(!tr)return;KAM.isik=!KAM.isik;try{await tr.applyConstraints({advanced:[{torch:KAM.isik}]})}catch(e){KAM.isik=false;$('#kisik').hidden=true;kMesaj('Bu cihazda fener açılamıyor','kotu')}$('#kisik').classList.toggle('on',KAM.isik)};
-$('#kdek').onclick=async()=>{
-  const d=$('#kdek');if(d.disabled)return;d.disabled=true;
-  let c=null;
-  try{
-    c=kareCiz();   // önce kare (basıldığı an), sonra her şey
-    const f=$('#kflas');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');navigator.vibrate&&navigator.vibrate(25);
-    if(!c){kMesaj('Çekilemedi, tekrar dene','kotu');return}
-    // anında kalite kontrolü (görüntüyü yeniden açmadan): keskinlik video karesinin tamamından, boyut kırpılmış kareden
-    let q=null;try{const v=$('#kvid');q=kaliteOlc(v,v.videoWidth,v.videoHeight);q.min=Math.min(c.width,c.height);q.kamera=1}catch(e){}
-    const k=kaliteSorun(q);
-    if(k.includes('bulanik')){kMesaj('Bulanık — sabit tut, tekrar çek','kotu');return}
-    if(k.includes('kucuk')&&Math.max(c.width,c.height)<700){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
-    const tek=KAM.mod==='tek';
-    if(tek)kameraKapat();   // tek çekimde kamerayı hemen kapat: bellek boşalsın, okuma beklemeden başlasın
-    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b){toast('Çekilemedi, tekrar dene');return}
-    const file=new File([b],`kamera_${Date.now()}.jpg`,{type:'image/jpeg'});file._q=q;
-    KAM.sayi++;if(!tek){$('#ksay').textContent=`${KAM.sayi} makbuz`;$('#kson').src=URL.createObjectURL(b);kMesaj('✓ Eklendi, sıradaki makbuz','iyi')}
-    onFiles([file]);
-    if(tek)toast('Fotoğraf eklendi, okunuyor');
-  }finally{if(c){c.width=c.height=1}d.disabled=false}
+// Çekildiğini belli et: beyaz parlama + çerçeve ve deklanşör nabzı + titreşim (iPhone'da Safari titreşimi desteklemez; iOS 18+ anahtar dokunuşu)
+function cekimIsaret(){for(const [el,k] of [[$('#kflas'),'on'],[$('#kcer'),'cek'],[$('#kdek'),'cek']]){el.classList.remove(k);void el.offsetWidth;el.classList.add(k);el.addEventListener('animationend',()=>el.classList.remove(k),{once:true})}
+  if(navigator.vibrate)navigator.vibrate(30);else try{$('#khapl').click()}catch(e){}}
+const kare2=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));   // parlama ekrana çizilsin
+KAM.is=Promise.resolve();
+$('#kdek').onclick=()=>{
+  // Kare basıldığı anda alınır; deklanşör kilitlenmez (önceki fotoğraf kaydedilirken de çekilebilir), işler sırayla yürür
+  let c=null,tam=null;
+  try{c=kareCiz();if(c){const v=$('#kvid'),s=Math.min(1,1000/Math.max(v.videoWidth,v.videoHeight));tam=document.createElement('canvas');tam.width=Math.round(v.videoWidth*s);tam.height=Math.round(v.videoHeight*s);tam.getContext('2d').drawImage(v,0,0,tam.width,tam.height)}}catch(e){}
+  cekimIsaret();
+  if(!c){kMesaj('Çekilemedi, tekrar dene','kotu');return}
+  const tek=KAM.mod==='tek';
+  KAM.is=KAM.is.then(async()=>{
+    try{
+      await kare2();
+      // kalite: keskinlik tam karenin 1000 px kopyasından (eşikler buna göre), boyut kırpılmış kareden
+      let q=null;try{q=kaliteOlc(tam,tam.width,tam.height);q.min=Math.min(c.width,c.height);q.kamera=1}catch(e){}
+      const k=kaliteSorun(q);
+      if(k.includes('bulanik')){kMesaj('Bulanık — sabit tut, tekrar çek','kotu');return}
+      if(k.includes('kucuk')&&Math.max(c.width,c.height)<700){kMesaj('Görüntü çok küçük — makbuza yaklaş','kotu');return}
+      if(tek){await new Promise(r=>setTimeout(r,180));kameraKapat()}   // parlama görünsün, sonra kamerayı kapat (bellek boşalsın)
+      const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b){toast('Çekilemedi, tekrar dene');return}
+      const file=new File([b],`kamera_${Date.now()}.jpg`,{type:'image/jpeg'});file._q=q;
+      KAM.sayi++;if(!tek){$('#ksay').textContent=`${KAM.sayi} makbuz`;const u=$('#kson').src;$('#kson').src=URL.createObjectURL(b);if(u&&u.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(u),1000);kMesaj('✓ Eklendi, sıradaki makbuz','iyi')}
+      onFiles([file]);
+      if(tek)toast('Fotoğraf eklendi, okunuyor');
+    }catch(e){kMesaj('Çekilemedi, tekrar dene','kotu')}
+    finally{c.width=c.height=1;if(tam)tam.width=tam.height=1}});
 };
