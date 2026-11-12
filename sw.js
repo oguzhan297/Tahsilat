@@ -1,10 +1,10 @@
 // Uygulamayı internetsiz de açılabilir yapar. Sürüm değişince eski önbellek silinir.
-const V='tahsilat-v21';
+const V='tahsilat-v22';
 // PaddleOCR (paddle.js, ONNX Runtime, modeller) büyük dosyalar: ayrı önbellekte durur, uygulama sürümü değişince silinmez.
 // Önbellek adı Z Raporu uygulamasıyla ortak (aynı adres: oguzhan297.github.io) → modeller iki uygulama için bir kez iner.
 const OCR='zrapor-ocr-1';
 const isOcr=u=>u.hostname==='paddle-model-ecology.bj.bcebos.com'||(u.hostname==='cdn.jsdelivr.net'&&u.pathname.startsWith('/npm/onnxruntime-web@'))||(u.origin===self.location.origin&&u.pathname.endsWith('/paddle.js'));
-const SHELL=['./','./index.html','./css/uygulama.css?v=21','./js/parser.js?v=21','./js/goruntu.js?v=21','./js/paddle-worker.js?v=21','./js/temel.js?v=21','./js/depo.js?v=21','./js/ayarlar.js?v=21','./js/kontrol.js?v=21','./js/kalite.js?v=21','./js/arayuz.js?v=21','./js/okuyucu-claude.js?v=21','./js/okuyucu-tesseract.js?v=21','./js/okuyucu-paddle.js?v=21','./js/okuma.js?v=21','./js/disari.js?v=21','./js/ornek.js?v=21','./js/firmalar.js?v=21','./js/baslat.js?v=21','./ikon.svg?v=21','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
+const SHELL=['./','./index.html','./css/uygulama.css?v=22','./js/parser.js?v=22','./js/goruntu.js?v=22','./js/paddle-worker.js?v=22','./js/temel.js?v=22','./js/depo.js?v=22','./js/ayarlar.js?v=22','./js/kontrol.js?v=22','./js/kalite.js?v=22','./js/arayuz.js?v=22','./js/okuyucu-claude.js?v=22','./js/okuyucu-tesseract.js?v=22','./js/okuyucu-paddle.js?v=22','./js/okuma.js?v=22','./js/disari.js?v=22','./js/ornek.js?v=22','./js/firmalar.js?v=22','./js/baslat.js?v=22','./ikon.svg?v=22','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 // cache:'reload' → tarayıcının kendi önbelleğindeki eski kopyayı değil, sunucudaki güncel dosyayı al
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,u.startsWith('http')?{mode:'no-cors'}:{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()))});

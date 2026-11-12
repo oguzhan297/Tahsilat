@@ -47,7 +47,7 @@ async function extract(r){
     const uz=TParse.uzlas?TParse.uzlas(d,[]):false;
     r.auto=fill(d);d.aciklama=mkAck(d);r._ack=d.aciklama;
     r.d=d;r.unsure=(Array.isArray(j.belirsiz)?j.belirsiz.filter(k=>FIELDS.some(f=>f.k===k)):[]).concat(uz?['toplam',...PAY.filter(k=>d[k]!=null)]:[]);r.akt=null;r.oku=okunanAnlik(d);
-    r.status='done';r.open=true;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;delete r._api;
+    r.status='done';r.open=false;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;delete r._api;
     save(r);saveImg(r,r._small);delete r._small;
   }catch(e){
     r.status='error';delete r._api;
@@ -65,7 +65,8 @@ async function prep(r){   // küçük resmi ve yüklenecek kopyayı sırası gel
 }
 async function pump(){if(busy)return;busy=true;
   while(KAM.akis)await new Promise(a=>setTimeout(a,400));   // kamera açıkken bekle: kapanınca okumaya başla
-  while(queue.length){const r=queue.shift();if(!rows.includes(r))continue;if(await prep(r))await extract(r)}
+  // Uzun seride işlemci aralıksız çalışınca telefon ısınıyor: makbuzlar arasında kısa nefes
+  while(queue.length){const r=queue.shift();if(!rows.includes(r))continue;if(await prep(r))await extract(r);if(queue.length&&S.mode!=='api')await new Promise(a=>setTimeout(a,1200))}
   busy=false}
 
 async function onFiles(list){
@@ -104,7 +105,7 @@ function sameReport(a,b){const n=v=>v==null?null:Math.round(+v*100);
 function addTexts(t){const parts=splitBulk(t),add=[];let dup=0;
   for(const p of parts){const r={id:uid(),status:'done',d:{},unsure:[],auto:[],src:'metin',created:Date.now(),open:false};applyParse(r,p);
     if(rows.concat(add).some(x=>x.status==='done'&&sameReport(x.d,r.d))){dup++;continue}add.push(r)}
-  if(add.length){rows.forEach(x=>x.open=false);if(add.length===1)add[0].open=true;rows.unshift(...add.slice().reverse());for(const r of add)save(r);render()}
+  if(add.length){rows.forEach(x=>x.open=false);rows.unshift(...add.slice().reverse());for(const r of add)save(r);render()}
   pm.hidden=true;
   toast(add.length?`${add.length} makbuz eklendi${dup?`, ${dup} tanesi zaten listedeydi`:''} — kontrol et`:(dup?'Bu makbuzlar zaten listede':'Metinde makbuz bulunamadı'))}
 
@@ -176,6 +177,11 @@ function kareCiz(){const v=$('#kvid'),vw=v.videoWidth,vh=v.videoHeight;if(!vw)re
   let x0=Math.max(0,(F.left-ox)/k-px),y0=Math.max(0,(F.top-oy)/k-py),x1=Math.min(vw,(F.right-ox)/k+px),y1=Math.min(vh,(F.bottom-oy)/k+py);
   if(!(x1-x0>50&&y1-y0>50)){x0=0;y0=0;x1=vw;y1=vh}
   const c=document.createElement('canvas');c.width=Math.round(x1-x0);c.height=Math.round(y1-y0);c.getContext('2d').drawImage(v,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);c._olcek=Math.min(1,1000/Math.max(vw,vh));return c}
+function kucukKare(src){if(!src||!src.width)return '';const o=120/Math.max(src.width,src.height),k=document.createElement('canvas');
+  k.width=Math.max(1,Math.round(src.width*o));k.height=Math.max(1,Math.round(src.height*o));k.getContext('2d').drawImage(src,0,0,k.width,k.height);return k.toDataURL('image/jpeg',.7)}
+$('#kson').onclick=e=>{e.preventDefault();e.stopPropagation();if(KAM.sayi)kameraKapat()};   // önizlemeye dokun: kamerayı kapat, listeye dön
+// Kamera açıkken ekran kilitlenir / uygulama arka plana geçerse görüntü akışı durur: kamerayı kapat
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&KAM.akis)kameraKapat()});
 $('#seri').onclick=()=>kameraAc('seri');
 $('#tekcek').onclick=()=>kameraAc('tek');
 $('#kyerel').onclick=()=>{KAM.sayi=0;kameraKapat();yerelKamera()};   // en yüksek çözünürlük: telefonun kendi kamerası
@@ -204,7 +210,8 @@ $('#kdek').onclick=()=>{
       if(tek){await new Promise(r=>setTimeout(r,180));kameraKapat()}   // parlama görünsün, sonra kamerayı kapat (bellek boşalsın)
       const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));if(!b){toast('Çekilemedi, tekrar dene');return}
       const file=new File([b],`kamera_${Date.now()}.jpg`,{type:'image/jpeg'});file._q=q;
-      KAM.sayi++;if(!tek){$('#ksay').textContent=`${KAM.sayi} makbuz`;const u=$('#kson').src;$('#kson').src=URL.createObjectURL(b);if(u&&u.startsWith('blob:'))setTimeout(()=>URL.revokeObjectURL(u),1000);kMesaj('✓ Eklendi, sıradaki makbuz','iyi')}
+      // önizleme küçük kare (~120 px): tam boy fotoğraf bu kutuda gösterilince iPhone dokunulduğunda açmaya çalışıp uygulamayı kapatıyordu
+      KAM.sayi++;if(!tek){$('#ksay').textContent=`${KAM.sayi} makbuz`;$('#kson').src=kucukKare(tam||c)||$('#kson').src;kMesaj('✓ Eklendi, sıradaki makbuz','iyi')}
       onFiles([file]);
       if(tek)toast('Fotoğraf eklendi, okunuyor');
     }catch(e){kMesaj('Çekilemedi, tekrar dene','kotu')}

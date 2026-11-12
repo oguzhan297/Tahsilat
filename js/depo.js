@@ -27,7 +27,8 @@ async function loadImg(r){
 }
 const sortRows=()=>rows.sort((a,b)=>((a.status==='done')-(b.status==='done'))||((b.created||0)-(a.created||0)));
 async function load(){
-  try{const all=await IDB.all('rows');rows=all.map(r=>({...r,status:'done',auto:r.auto||[],open:false}));
+  // yükleme sürerken eklenen fotoğraflar / makbuzlar kaybolmasın: bellektekileri koru
+  try{const all=await IDB.all('rows'),ids=new Set(all.map(r=>r.id)),simdi=rows.filter(r=>!ids.has(r.id));rows=[...simdi,...all.map(r=>({...r,status:'done',auto:r.auto||[],open:false}))];
     // Firma adı tanımları güncellendiyse eski kartlara da uygula (yalnız elle değiştirilmemiş ve Luca'ya aktarılmamış kartlar)
     for(const r of rows){const d=r.d||{};if(r.akt)continue;const e=evrakKisa(d.evrak_no);if(e===d.evrak_no)continue;
       const ack=!d.aciklama||d.aciklama===r._ack;d.evrak_no=e;if(r.oku)r.oku.evrak_no=e;if(ack){d.aciklama=mkAck(d);r._ack=d.aciklama}save(r)}
@@ -41,7 +42,7 @@ async function load(){
       const ack=!d.aciklama||d.aciklama===r._ack;d.firma=yeni;r.oku.firma=yeni;if(ack){d.aciklama=mkAck(d);r._ack=d.aciklama}save(r)}
     setStore('ok')}
   catch(e){setStore('err');notice('Bu tarayıcı veri saklamaya izin vermiyor (gizli sekme olabilir). Makbuzlar kaydedilmez; CSV’yi indirmeyi unutma.')}
-  sortRows();render();
+  sortRows();render();window.yuklendi=true;   // testler kayıtlar yüklenene kadar bekler
 }
 
 // ---- Yedek ----

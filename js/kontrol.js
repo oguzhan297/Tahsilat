@@ -1,13 +1,22 @@
 // Kontroller: tarih, evrak no, ödeme kalemleri = toplam, rakam = yazıyla tutar, çift kayıt
 // Her satır: {ok:true} tuttu · {ok:false} uyarı (kart "Kontrol et" olur) · {ok:true,info:true} bilgi notu
-function checks(r){
+// Bir çizim (render) boyunca her makbuzun kontrolleri bir kez hesaplanır (çok makbuzda açılış yavaşlığı)
+let CK=null;
+function ckToplu(fn){const ic=!CK;if(ic)CK=new Map();try{return fn()}finally{if(ic)CK=null}}
+// Çift kayıt: firma + tarih + evrak no + tutar anahtarı; her makbuzu her makbuzla karşılaştırmak yerine bir kez sayılır
+const ciftAnahtar=d=>nno(d.evrak_no)+'|'+nkey(d.firma)+'|'+d.tarih+'|'+Math.round((d.toplam||0)*100);
+function ciftSay(){if(CK&&CK.has('__cift'))return CK.get('__cift');const m=new Map();
+  for(const x of rows)if(x.status==='done'&&x.d.evrak_no){const k=ciftAnahtar(x.d);m.set(k,(m.get(k)||0)+1)}
+  if(CK)CK.set('__cift',m);return m}
+function checks(r){if(CK){let v=CK.get(r);if(!v){v=checks0(r);CK.set(r,v)}return v}return checks0(r)}
+function checks0(r){
   const d=r.d,out=[];
   if(d.makbuz_mu===false)out.push({ok:false,m:'Bu görüntü tahsilat makbuzuna benzemiyor; değerleri dikkatle kontrol et.'});
   if(!d.tarih)out.push({ok:false,m:r.el?'Tarih okunamadı (el yazısı) — fotoğraftan bakıp yaz. Yalnız gün.ay yazman yeter.':'Tarih boş'});
   else if(!dateOk(d.tarih))out.push({ok:false,m:`Tarih geçersiz, ileri tarihli ya da GG.AA.YYYY biçiminde değil: “${d.tarih}”`});
   else if(Date.now()-dnum(d.tarih)*864e5>180*864e5)out.push({ok:false,m:`Tarih 6 aydan eski (${d.tarih}) — yıl yanlış okunmuş olabilir`});   // ör. el yazısı 2026 → 2016
   if(!d.evrak_no)out.push({ok:false,m:'Evrak No boş'});
-  else if(rows.some(x=>x!==r&&x.status==='done'&&x.d.evrak_no&&nno(x.d.evrak_no)===nno(d.evrak_no)&&nkey(x.d.firma)===nkey(d.firma)&&x.d.tarih===d.tarih&&Math.round((x.d.toplam||0)*100)===Math.round((d.toplam||0)*100)))out.push({ok:false,m:'Aynı firma, tarih, evrak no ve tutarla listede başka bir makbuz var — iki kez eklenmiş olabilir'});
+  else if((ciftSay().get(ciftAnahtar(d))||0)>1)out.push({ok:false,m:'Aynı firma, tarih, evrak no ve tutarla listede başka bir makbuz var — iki kez eklenmiş olabilir'});
   if(!d.toplam)out.push({ok:false,m:r.el?'Tutar okunamadı (el yazısı) — fotoğraftan bakıp yaz.':'Toplam tutar yok'});
   else{
     const s=r2(paySum(d)+(d.diger||0)),df=Math.abs(s-d.toplam);

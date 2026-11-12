@@ -45,7 +45,8 @@ async function hataBildir(r,not='',dugme){
   return ok;
 }
 
-function render(){
+function render(){return ckToplu(render0)}
+function render0(){
   const L=$('#list');filtreUI();
   const goster=rows.filter(gorunur);
   if(!rows.length){L.innerHTML='<div class="empty-state">Henüz makbuz yok.<br>Yukarıdan fotoğraf çekerek başla.</div>'}
@@ -61,7 +62,7 @@ function render(){
     if(inSec)g+='</div></section>';
     return `<div class="card${r.open?' open':''}" id="c_${r.id}">
       <div class="head" data-tog="${r.id}">${headHTML(r)}</div>
-      <div class="body">
+      <div class="body">${r.open?`
         ${hizliHTML(r)}
         ${r.thumb?`<img class="big" src="${r.thumb}" data-zoom="${r.id}" alt="Makbuz fotoğrafı (dokun: büyüt)">`:''}
         ${r.src==='foto'||r.hasImg?`<div class="devam">${(r.sayfa||1)>1?`${ik('sayfa')}${r.sayfa} fotoğraftan birlikte okundu · `:''}<button class="lnk" data-devam="${r.id}">${ik('arti')}Makbuz uzunsa devamını ekle</button>${S.key&&S.mode!=='api'?` · <button class="lnk" data-claude="${r.id}">${ik('kalem')}Claude ile oku</button>`:''}</div>`:''}
@@ -71,7 +72,7 @@ function render(){
         ${r.ocr!=null?`<details class="ocr"><summary>Okunan metin (düzeltip yeniden okutabilirsin)</summary><textarea rows="10" data-ocr="${r.id}">${esc(r.ocr)}</textarea><div class="set-row"><button class="btn small" data-copyocr="${r.id}">${ik('kopya')}Kopyala</button><button class="btn small" data-reparse="${r.id}">Metne göre yeniden oku</button></div></details>`:''}
         ${r.akt?`<div class="aktbar">✓ ${aktTarih(r.akt,1)} tarihinde Luca dosyasına aktarıldı. <button class="btn small" data-aktsil="${r.id}">Aktarılmadı yap</button></div>`:''}
         ${bildirKutuHTML(r)}
-        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="lnk bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>
+        <div class="cardfoot"><button class="btn small danger" data-del="${r.id}">Sil</button><button class="lnk bildirlnk" data-bildirac="${r.id}">${ik('uyari')}${r.bildirildi?'Bildirildi':'Hata bildir'}</button><button class="btn small" data-tog="${r.id}">Kapat</button></div>`:''}
       </div></div>`;
   }).join('');
   renderSum();
@@ -174,7 +175,7 @@ document.addEventListener('keydown',e=>{const i=e.target;if(e.key!=='Enter'||!i.
 function refreshCard(r){
   const c=document.getElementById('c_'+r.id);if(!c){renderSum();return}   // süzgeç yüzünden ekranda olmayan kart: baştan çizme (yazılan kutu silinir, klavye kapanır)
   c.querySelector('.head').innerHTML=headHTML(r);
-  c.querySelector('.checks').innerHTML=checksHTML(r);
+  const ck=c.querySelector('.checks');if(ck)ck.innerHTML=checksHTML(r);   // kapalı kartın gövdesi çizilmez (açılınca çizilir)
   {const bk=c.querySelector('.bildirkutu');if(bk){bk.querySelector('.dzb').innerHTML=duzBaslik(r);bk.querySelector('.dzd').innerHTML=duzDurum(r);if(duzeltilen(r).length)bk.hidden=false}}
   {const hz=c.querySelector('.hizli');if(hz){const a=hizliAlanlar(r);hz.querySelectorAll('.hz-s').forEach(x=>x.classList.toggle('tamam',!a.includes(x.dataset.hzalan)));
     const t=hz.querySelector('input[data-hizli="tutar"]');if(t&&t!==document.activeElement)t.value=fm(r.d.toplam)}}
@@ -212,7 +213,7 @@ document.addEventListener('change',e=>{
     r.d.toplam=v||null;for(const k of PAY)if((r.auto||[]).includes(k))r.d[k]=null;if(p.length===1)r.d[p[0]]=v||null;r.auto=fill(r.d,[]);
     r.unsure=(r.unsure||[]).filter(k=>!HZ_TUTAR.includes(k));i.value=fm(r.d.toplam);
     if(r.akt){r.akt=null;toast('Makbuz değişti: bir sonraki Luca dosyasına yeniden girecek')}
-    save(r);rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI();
+    save(r);ckToplu(()=>{rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI()});
     const dy=i.getBoundingClientRect().top-y0;if(Math.abs(dy)>1)window.scrollBy(0,dy);return}
   if(!i.dataset||!i.dataset.k)return;
   const r=rows.find(x=>x.id===i.dataset.id);const f=FIELDS.find(x=>x.k===i.dataset.k);
@@ -236,7 +237,7 @@ document.addEventListener('change',e=>{
   const tut=document.activeElement&&document.activeElement.matches&&document.activeElement.matches('input,textarea')?document.activeElement:i,y0=tut.getBoundingClientRect().top;
   if(r.akt){r.akt=null;toast('Makbuz değişti: bir sonraki Luca dosyasına yeniden girecek')}
   save(r);
-  rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI();
+  ckToplu(()=>{rows.forEach(x=>{if(x.status==='done')refreshCard(x)});filtreUI()});
   if(tut.isConnected){const dy=tut.getBoundingClientRect().top-y0;if(Math.abs(dy)>1)window.scrollBy(0,dy)}
 });
 
