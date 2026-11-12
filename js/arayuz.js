@@ -21,10 +21,15 @@ function bildirKutuHTML(r){return `<div class="duz bildirkutu" id="bk-${r.id}" $
   <textarea rows="2" id="bn-${r.id}" placeholder="Not (isteğe bağlı) — örn. tutar 4.230,00 olmalı"></textarea>
   <div class="hint">${S.ghKey?'Makbuz, fotoğrafıyla birlikte doğrudan gizli test gelen kutusuna gönderilir.':'Bildirim dosyası oluşturulur; sohbete gönder. (Ayarlar’a gelen kutusu anahtarı girersen doğrudan gönderilir.)'}</div>
   <div class="set-row" style="justify-content:flex-end"><span class="dzd">${duzDurum(r)}</span><button class="btn small primary" data-bildir="${r.id}">${ik('paylas')}${r.bildirildi?'Yeniden gönder':'Gönder'}</button></div></div>`}
+// Gönderim süresinin çoğu fotoğrafın boyutundan: 1,5 MB'tan büyük asıl fotoğraf aynı çözünürlükte %88 kaliteyle yeniden kaydedilir
+// (okuma testleri için çözünürlük korunur; telefon kamerasının 4–6 MB'lık dosyası ~1 MB'a iner)
+async function bildirFoto(b,u){if(!b||b.size<1.5e6)return u;try{const bm=await createImageBitmap(b,{imageOrientation:'from-image'});
+  const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);bm.close&&bm.close();
+  const y=c.toDataURL('image/jpeg',.88);c.width=c.height=1;return y.length<u.length?y:u}catch(e){return u}}
 async function hataBildir(r,not='',dugme){
   const k=duzeltilen(r);let foto=null,asil=[];try{foto=r.thumb&&r.thumb.startsWith('data:')?r.thumb:await IDB.get('imgs',r.id)}catch(e){}
   // fotoğrafın aslı saklıysa onu da ekle (test arşivi için en değerlisi)
-  try{const o=r.hasOrig?await IDB.get('orig',r.id):null;for(const b of o||[])asil.push(await new Promise((a,h)=>{const f=new FileReader();f.onload=()=>a(f.result);f.onerror=h;f.readAsDataURL(b)}))}catch(e){}
+  try{const o=r.hasOrig?await IDB.get('orig',r.id):null;for(const b of o||[])asil.push(await new Promise((a,h)=>{const f=new FileReader();f.onload=()=>a(f.result);f.onerror=h;f.readAsDataURL(b)}).then(u=>bildirFoto(b,u)))}catch(e){}
   const paket={tur:'tahsilat-okuma-hatasi',surum:APP_VER,okuyucu:S.mode,olusturma:new Date().toISOString(),tarih:r.d.tarih,evrak_no:r.d.evrak_no,firma:r.d.firma,el:!!r.el,not:not||'',
     duzeltilen:Object.fromEntries(k.map(x=>[x,{okunan:r.oku&&r.oku[x],dogru:r.d[x]}])),dogru_degerler:okunanAnlik(r.d),okunan_degerler:r.oku||null,
     okunan_metin:r.ocr||'',kalite:r.q||null,foto_asil:asil,foto_kucuk:asil.length?null:foto||null};
@@ -34,7 +39,7 @@ async function hataBildir(r,not='',dugme){
     const klasor=`${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}_${ad}_${Math.random().toString(36).slice(2,6)}`;
     const fotolar=(asil.length?asil:foto&&foto.startsWith('data:')?[foto]:[]).map((u,i)=>({ad:`foto-${i+1}${asil.length?'':'-kucuk'}.jpg`,b64:u.slice(u.indexOf(',')+1)}));
     const govde={...paket,foto_asil:undefined,foto_kucuk:undefined,fotolar:fotolar.map(f=>f.ad)};
-    const eski=dugme&&dugme.innerHTML;if(dugme){dugme.disabled=true;dugme.textContent='Gönderiliyor…'}
+    const eski=dugme&&dugme.innerHTML;if(dugme){dugme.disabled=true;dugme.textContent='Gönderiliyor…'}toast('Gönderiliyor… uygulamayı kullanmaya devam edebilirsin');
     try{await ghGonder(klasor,[{ad:'bildirim.json',b64:b64Metin(JSON.stringify(govde,null,1))},...fotolar]);
       r.bildirildi=Date.now();save(r);toast('✓ Bildirim gönderildi, teşekkürler');return true}
     catch(e){toast('Gönderilemedi ('+(e.message==='Failed to fetch'?'bağlantı yok':e.message)+'); dosya olarak paylaşılıyor')}
@@ -45,7 +50,7 @@ async function hataBildir(r,not='',dugme){
   return ok;
 }
 
-function render(){return ckToplu(render0)}
+function render(){const v=ckToplu(render0);if(window.kbDenetle)kbDenetle();return v}
 function render0(){
   const L=$('#list');filtreUI();
   const goster=rows.filter(gorunur);
@@ -57,7 +62,7 @@ function render0(){
     let g='',inSec=false;
     for(const f of FIELDS){
       if(f.sec){if(inSec)g+='</div></section>';g+=`<section class="grp${f.x?' grp-x':''}"><div class="grp-h">${secHTML(f.sec)}</div><div class="grid">`;inSec=true}
-      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
+      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.k==='tarih'?'inputmode="numeric" enterkeyhint="done"':f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
     }
     if(inSec)g+='</div></section>';
     return `<div class="card${r.open?' open':''}" id="c_${r.id}">
@@ -262,5 +267,9 @@ $('#ara').addEventListener('input',e=>{FLT.q=e.target.value.trim();render()});
     zm=setTimeout(()=>{if(document.activeElement!==el)return;const vv=window.visualViewport;if(!vv)return;
       const alt=vv.offsetTop+vv.height-8,dib=kutu.getBoundingClientRect().bottom,ust=el.getBoundingClientRect().top,d=Math.min(dib-alt,ust-vv.offsetTop-16);
       if(d>4)window.scrollBy(0,d)},650)});
-  document.addEventListener('focusout',()=>setTimeout(()=>{if(!yazilir(document.activeElement))document.body.classList.remove('klavye')},80));
+  document.addEventListener('focusout',()=>setTimeout(kbDenetle,80));
+  // Odaktaki kutu çizim sırasında silinirse iPhone "focusout" göndermiyor ve alt çubuk (Luca CSV) gizli kalıyordu
+  window.kbDenetle=()=>{const el=document.activeElement;if(!(yazilir(el)&&el.isConnected))document.body.classList.remove('klavye')};
+  if(window.visualViewport)visualViewport.addEventListener('resize',()=>setTimeout(kbDenetle,60));
+  document.addEventListener('touchstart',()=>setTimeout(kbDenetle,300),{passive:true});
 })();
