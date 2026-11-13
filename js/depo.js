@@ -24,7 +24,7 @@ async function saveImg(r,src){if(!src)return;try{await IDB.put('imgs',src,r.id);
 async function kuyrukSakla(list){for(const r of list){try{const pages=r.pages||[r.file];await IDB.put('orig',pages,r.id);r.hasOrig=true;
   if(r.status!=='done')await IDB.put('rows',{id:r.id,...ser(r),bekliyor:1})}catch(e){}}}
 // Okuma bitince büyük fotoğrafı bellekten bırak (kart açılınca kayıtlı kopyası yüklenir)
-function resimBirak(r){if(r.thumb&&String(r.thumb).startsWith('blob:')){const u=r.thumb;setTimeout(()=>URL.revokeObjectURL(u),2000)}if(!r.open||r.hasImg||r._small)r.thumb=r.open?r.thumb:null}
+function resimBirak(r){if(r.thumb&&String(r.thumb).startsWith('blob:')){const u=r.thumb;setTimeout(()=>URL.revokeObjectURL(u),2000)}r.thumb=r.open&&r._small?r._small:null}   // açık kartta iptal edilmiş blob adresi kalmasın
 async function loadImg(r){
   if(r.thumb||!r.hasImg||r._imgLoading)return;r._imgLoading=true;
   try{const src=await IDB.get('imgs',r.id);if(src){r.thumb=src;

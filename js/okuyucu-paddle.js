@@ -164,7 +164,7 @@ async function extractPaddle(r,ikinci){
     // toplamları tam tutan bir okuma varsa onu al; yoksa okumaları alan alan birleştir
     const merged=best.sc>=6||all.length<2?best.res:TParse.merge(all);
     applyParse(r,best.sc>=6||all.length<2?best.text:texts.map((t,i)=>`—— ${i+1}. okuma ——\n`+t).join('\n'),merged);
-    r.status='done';r.open=false;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;resimBirak(r);delete r.prog;kutu('okundu',{sn:Math.round((Date.now()-t0)/1000),gecis:all.length});
+    r.status='done';r.open=false;r.created=r.created||Date.now();r.sayfa=sayfalar(r).length;delete r.blob;delete r.file;delete r.pages;resimBirak(r);delete r.prog;kutu('okundu',{sn:Math.round((Date.now()-t0)/1000),gecis:all.length});r._sure=(Date.now()-t0)/all.length;
     save(r);saveImg(r,r._small);delete r._small;
   }catch(e){
     clearInterval(sayac);
