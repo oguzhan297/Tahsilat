@@ -42,7 +42,10 @@ let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false;
 // Çok çekirdek: sayfa "cross-origin isolated" ise (sw.js başlıkları ekler) okuma birden çok çekirdeğe bölünür (Z Raporu'nda iPhone: 5,5 → 3,8 sn).
 // Yardımcı iş parçacıkları ORT'nin yükleyicisinden (vendor/ort-wasm-simd-threaded.mjs, ORT sürümüyle aynı) açılır. Sorun çıkarsa tek çekirdeğe dönülür (th_thr='1').
 const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
-function cekirdek(){try{if(!self.crossOriginIsolated||localStorage.getItem('th_thr')==='1')return 1}catch(e){return 1}return Math.max(1,Math.min(4,navigator.hardwareConcurrency||2))}
+// Üst sınır 2: Z Raporu'nda iPhone'da 4 çekirdekle uzun okumada sayfa bellekten kapandı. Okurken çökme olursa tek çekirdeğe iner.
+function cekirdek(){try{if(!self.crossOriginIsolated)return 1;const t=+localStorage.getItem('th_thr')||2;return Math.max(1,Math.min(t,2,navigator.hardwareConcurrency||2))}catch(e){return 1}}
+try{const o=KUTU.onceki;if(o&&o.olaylar){const ev=o.olaylar;let i=ev.length-1;while(i>=0&&ev[i].e!=='oku'&&ev[i].e!=='okundu')i--;
+  const m=i>=0&&ev[i].e==='oku'&&/isci-(\d+)/.exec(ev[i].motor||'');if(m&&+m[1]>1){localStorage.setItem('th_thr',String(Math.max(1,Math.floor(+m[1]/2))));kutu('cekirdekAzaldi',{eski:+m[1]})}}}catch(e){}
 function tekCekirdegeDon(m){try{localStorage.setItem('th_thr','1')}catch(x){}kutu('cekirdekKapandi',{m:String(m||'').slice(0,120)})}
 async function paddleDosyalari(){
   if(onIndir){pdlProg&&pdlProg('Okuyucu indiriliyor…');try{await onIndir}catch(e){}}   // önceden indirme sürüyorsa aynı dosyaları ikinci kez indirme
@@ -77,7 +80,7 @@ function isciMotoru(f,thr=1){
       ok({tur:'isci',thr:c&&c.thr||thr,olu:()=>olu,
         async resim(id,src){const bmp=await fotoBitmap(src);await gonder({t:'img',id,bmp},[bmp])},
         async oku(id,src,opt){const r=await gonder({t:'read',id,opt,params:opt.p||{}});const it=r.items||[];it.w=r.w;it.h=r.h;return it},
-        birak(id){gonder({t:'free',id}).catch(()=>{})}})},er=>{clearTimeout(zm);bitir(er);no(er)});
+        birak(id){gonder({t:'free',id}).catch(()=>{})},kapat(){bitir(new Error('Okuyucu kapatıldı'))}})},er=>{clearTimeout(zm);bitir(er);no(er)});
   });
 }
 async function anaMotor(f){
@@ -145,7 +148,7 @@ async function extractPaddle(r,ikinci){
     toast('PaddleOCR bu tarayıcıda çalışmadı, Tesseract ile okunuyor');return extractFree(r);
   }
   const ps=sayfalar(r),sid=i=>r.id+':'+i,t0=Date.now();let etiket='Okunuyor (PaddleOCR)…';
-  kutu('oku',{id:r.id.slice(-4),sayfa:ps.length,mb:+((ps[0]&&ps[0].size||0)/1e6).toFixed(1),motor:motor.tur});
+  kutu('oku',{id:r.id.slice(-4),sayfa:ps.length,mb:+((ps[0]&&ps[0].size||0)/1e6).toFixed(1),motor:motor.tur+(motor.thr>1?'-'+motor.thr:'')});
   // işçide okurken ekran serbest: geçen süreyi göster
   const sayac=setInterval(()=>setProg(r,`${etiket} ${Math.round((Date.now()-t0)/1000)} sn`),1000);
   try{
@@ -178,7 +181,7 @@ async function extractPaddle(r,ikinci){
     clearInterval(sayac);
     // işçi çöktüyse (bellek vb.) bu raporu bir kez de sayfada oku
     if(motor.tur==='isci'&&motor.olu())kutu('isciCoktu',{m:String(e&&e.message||e).slice(0,120)});
-    if(motor.thr>1&&!ikinci){tekCekirdegeDon(e&&e.message);pdl=null;return extractPaddle(r,true)}   // çok çekirdekle okunamadı: tek çekirdekle bir kez daha
+    if(motor.thr>1&&!ikinci&&!/Fotoğraf|indirilemedi/.test(String(e&&e.message||e))){tekCekirdegeDon(e&&e.message);try{motor.kapat&&motor.kapat()}catch(x){}pdl=null;return extractPaddle(r,true)}   // çok çekirdekle okunamadı: tek çekirdekle bir kez daha
     if(motor.tur==='isci'&&motor.olu()&&!ikinci){isciYok=true;pdl=null;console.warn('PaddleOCR işçisi çöktü, sayfada okunuyor:',e);return extractPaddle(r,true)}
     r.status='error';r.err=(e&&e.message)||'Okunamadı';delete r.prog;kutu('okumaHata',{m:String(r.err).slice(0,120),isci:motor.tur});
     // bir kez kendiliğinden yeniden dene (geçici bellek / işçi sorunu); ikinci kez olmazsa "Okunamadı + Tekrar" kalır

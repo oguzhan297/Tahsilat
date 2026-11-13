@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=29;
+const APP_VER=30;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  30:['Çok makbuz okurken kapanma riski azaltıldı (en çok 2 çekirdek)','Galeriden seçilen makbuzlar uygulama kapanınca kaybolmuyor'],
   29:['Okuma artık telefonun birden çok çekirdeğini kullanır (daha hızlı; uygulamayı bir kez kapatıp açınca devreye girer)'],
   28:['Telefon ısınıp okuma yavaşlarsa makbuzlar arasındaki ara kendiliğinden uzar','Okuma sürerken kamera açılırsa okuma bekler'],
   27:['Okunamayan makbuz bir kez kendiliğinden yeniden okunur'],
