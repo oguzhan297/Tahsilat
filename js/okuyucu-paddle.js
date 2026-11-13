@@ -39,6 +39,11 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 // Okuma motoru: önce işçide (ekran donmaz), işçi açılamazsa / çökerse sayfada (eski yol).
 // motor = { tur:'isci'|'ana', resim(id,src), oku(id,src,opt) → kutular, birak(id) }
 let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false;
+// Çok çekirdek: sayfa "cross-origin isolated" ise (sw.js başlıkları ekler) okuma birden çok çekirdeğe bölünür (Z Raporu'nda iPhone: 5,5 → 3,8 sn).
+// Yardımcı iş parçacıkları ORT'nin yükleyicisinden (vendor/ort-wasm-simd-threaded.mjs, ORT sürümüyle aynı) açılır. Sorun çıkarsa tek çekirdeğe dönülür (th_thr='1').
+const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
+function cekirdek(){try{if(!self.crossOriginIsolated||localStorage.getItem('th_thr')==='1')return 1}catch(e){return 1}return Math.max(1,Math.min(4,navigator.hardwareConcurrency||2))}
+function tekCekirdegeDon(m){try{localStorage.setItem('th_thr','1')}catch(x){}kutu('cekirdekKapandi',{m:String(m||'').slice(0,120)})}
 async function paddleDosyalari(){
   if(onIndir){pdlProg&&pdlProg('Okuyucu indiriliyor…');try{await onIndir}catch(e){}}   // önceden indirme sürüyorsa aynı dosyaları ikinci kez indirme
   const wasmDir=`https://cdn.jsdelivr.net/npm/onnxruntime-web@${PADDLE.ort}/dist/`;
@@ -49,7 +54,7 @@ async function paddleDosyalari(){
     if(p!==last){last=p;pdlProg&&pdlProg(p>=100?'Okuyucu hazırlanıyor…':`İlk kullanım: okuyucu indiriliyor %${p} (bir kez)`)}};
   ekranAcikTut(true);
   try{const [det,rec,wasm]=await Promise.all(['det','rec','wasm'].map(k=>fetchBig(urls[k],(n,t)=>{if(t)tot[k]=t;got[k]=n;tick()})));
-    return {det,rec,wasm,wasmDir}}
+    return {det,rec,wasm,wasmDir,mjs:new URL(ORT_MJS,location.href).href}}
   finally{if(!onIndir)ekranAcikTut(false)}
 }
 // Fotoğrafı yönü düzeltilmiş (EXIF) ve iOS tuval sınırına (16 MP) indirilmiş ImageBitmap olarak hazırla
@@ -59,7 +64,7 @@ async function fotoBitmap(src){
   const c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
   const b=await createImageBitmap(c);c.width=c.height=1;return b;
 }
-function isciMotoru(f){
+function isciMotoru(f,thr=1){
   return new Promise((ok,no)=>{
     let w;try{w=new Worker(`js/paddle-worker.js?v=${APP_VER}`,{type:'module'})}catch(e){return no(e)}
     let n=0,olu=false;const bek=new Map();
@@ -67,9 +72,9 @@ function isciMotoru(f){
     const bitir=er=>{if(olu)return;olu=true;for(const x of bek.values())x.b(er);bek.clear();try{w.terminate()}catch(e){}};
     w.onmessage=e=>{const m=e.data;if(m.hazir)return;const x=bek.get(m.n);if(!x)return;bek.delete(m.n);m.ok?x.a(m):x.b(new Error(m.err||'İşçi hatası'))};
     w.onerror=e=>{e.preventDefault&&e.preventDefault();const er=new Error('İşçi açılamadı'+(e.message?': '+e.message:''));bitir(er);no(er)};
-    const zm=setTimeout(()=>{const er=new Error('İşçi zamanında hazır olmadı');bitir(er);no(er)},120000);
-    gonder({t:'init',det:f.det,rec:f.rec,wasm:f.wasm,wasmDir:f.wasmDir,detName:PADDLE.det,recName:PADDLE.rec},[f.det,f.rec,f.wasm]).then(()=>{clearTimeout(zm);
-      ok({tur:'isci',olu:()=>olu,
+    const zm=setTimeout(()=>{const er=new Error('İşçi zamanında hazır olmadı');bitir(er);no(er)},thr>1?90000:120000);
+    gonder({t:'init',det:f.det,rec:f.rec,wasm:f.wasm,wasmDir:f.wasmDir,mjs:f.mjs,thr,detName:PADDLE.det,recName:PADDLE.rec},[f.det,f.rec,f.wasm]).then(c=>{clearTimeout(zm);
+      ok({tur:'isci',thr:c&&c.thr||thr,olu:()=>olu,
         async resim(id,src){const bmp=await fotoBitmap(src);await gonder({t:'img',id,bmp},[bmp])},
         async oku(id,src,opt){const r=await gonder({t:'read',id,opt,params:opt.p||{}});const it=r.items||[];it.w=r.w;it.h=r.h;return it},
         birak(id){gonder({t:'free',id}).catch(()=>{})}})},er=>{clearTimeout(zm);bitir(er);no(er)});
@@ -81,9 +86,9 @@ async function anaMotor(f){
   L.ort.env.wasm.wasmBinary=f.wasm;   // çalışma zamanını önbellekten ver, ORT kendisi indirmesin
   const du=b=>URL.createObjectURL(new Blob([b])),dU=du(f.det),rU=du(f.rec);let ocr;
   try{ocr=await L.PaddleOCR.create({textDetectionModelName:PADDLE.det,textDetectionModelAsset:{url:dU},textRecognitionModelName:PADDLE.rec,textRecognitionModelAsset:{url:rU},
-      ortOptions:{backend:'wasm',wasmPaths:f.wasmDir,numThreads:self.crossOriginIsolated?Math.min(4,navigator.hardwareConcurrency||2):1}})}
+      ortOptions:{backend:'wasm',wasmPaths:{mjs:f.mjs,wasm:f.wasmDir+'ort-wasm-simd-threaded.wasm'},numThreads:cekirdek()}})}
   finally{URL.revokeObjectURL(dU);URL.revokeObjectURL(rU)}
-  return {tur:'ana',olu:()=>false,async resim(){},
+  return {tur:'ana',thr:cekirdek(),olu:()=>false,async resim(){},
     async oku(id,src,opt){await new Promise(a=>setTimeout(a,30));const img=await prepImage(src,opt);const [out]=await ocr.predict(img,opt.p||{});const it=out&&out.items||[];it.w=img.width;it.h=img.height;img.width=img.height=1;return it},
     birak(){}};
 }
@@ -94,6 +99,9 @@ async function getPaddle(onProg){
     pdlProg&&pdlProg('İlk kullanım: PaddleOCR indiriliyor (bir kez)…');
     // modül işçi + OffscreenCanvas varsa işçide; yoksa ya da işçi başarısızsa sayfada
     if(!isciYok&&typeof Worker!=='undefined'&&typeof OffscreenCanvas!=='undefined'&&typeof createImageBitmap==='function'){
+      const thr=cekirdek();
+      if(thr>1)try{pdl=await isciMotoru(await paddleDosyalari(),thr);kutu('motor',{thr});return pdl}
+        catch(e){if(/indirilemedi/.test(e&&e.message||''))throw e;tekCekirdegeDon(e&&e.message);console.warn('Çok çekirdekli okuyucu açılamadı, tek çekirdekle okunacak:',e)}
       try{pdl=await isciMotoru(await paddleDosyalari());return pdl}
       catch(e){if(/indirilemedi/.test(e&&e.message||''))throw e;isciYok=true;console.warn('PaddleOCR işçisi kullanılamadı, sayfada okunacak:',e)}
     }
@@ -170,6 +178,7 @@ async function extractPaddle(r,ikinci){
     clearInterval(sayac);
     // işçi çöktüyse (bellek vb.) bu raporu bir kez de sayfada oku
     if(motor.tur==='isci'&&motor.olu())kutu('isciCoktu',{m:String(e&&e.message||e).slice(0,120)});
+    if(motor.thr>1&&!ikinci){tekCekirdegeDon(e&&e.message);pdl=null;return extractPaddle(r,true)}   // çok çekirdekle okunamadı: tek çekirdekle bir kez daha
     if(motor.tur==='isci'&&motor.olu()&&!ikinci){isciYok=true;pdl=null;console.warn('PaddleOCR işçisi çöktü, sayfada okunuyor:',e);return extractPaddle(r,true)}
     r.status='error';r.err=(e&&e.message)||'Okunamadı';delete r.prog;kutu('okumaHata',{m:String(r.err).slice(0,120),isci:motor.tur});
     // bir kez kendiliğinden yeniden dene (geçici bellek / işçi sorunu); ikinci kez olmazsa "Okunamadı + Tekrar" kalır

@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=28;
+const APP_VER=29;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  29:['Okuma artık telefonun birden çok çekirdeğini kullanır (daha hızlı; uygulamayı bir kez kapatıp açınca devreye girer)'],
   28:['Telefon ısınıp okuma yavaşlarsa makbuzlar arasındaki ara kendiliğinden uzar','Okuma sürerken kamera açılırsa okuma bekler'],
   27:['Okunamayan makbuz bir kez kendiliğinden yeniden okunur'],
   26:['Kamera izni bir açılışta bir kez sorulur: kamerayı kapatıp 3 dakika içinde yeniden açınca tekrar sormaz (iPhone ana ekran uygulamalarında izni kalıcı yapmaya izin vermiyor)'],
@@ -158,6 +159,6 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const uid=()=>Math.random().toString(36).slice(2,10);
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600)}
 function notice(m){const n=$('#notice');n.style.display=m?'block':'none';n.textContent=m||''}
-function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Yazı tanıma aracı indirilemedi. İnternet bağlantını kontrol et.'));document.head.appendChild(s)})}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');if(/^https?:/.test(src))s.crossOrigin='anonymous';s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Yazı tanıma aracı indirilemedi. İnternet bağlantını kontrol et.'));document.head.appendChild(s)})}
 function openImage(src){return new Promise((res,rej)=>{const u=URL.createObjectURL(src),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im)};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('Fotoğraf açılamadı'))};im.src=u})}
 function setProg(r,txt){r.prog=txt;const el=document.querySelector(`#c_${r.id} .t2`);if(el)el.textContent=txt}
