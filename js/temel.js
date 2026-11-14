@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=33;
+const APP_VER=34;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  34:['Arka arkaya tarama bitince kamera 30 sn sonra tamamen kapanır'],
   33:['Okuyucu hafifledi: biraz daha hızlı ve serin. Bir kerelik ~5 MB iner.'],
   32:['Okuyucu artık çok daha hızlı iniyor'],
   31:['İki parmakla sayfayı yakınlaştırma kapatıldı: okuma sırasında uygulamayı kapatabiliyordu'],
