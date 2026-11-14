@@ -3,9 +3,11 @@
 // paddle.js = PaddleOCR.js + ONNX Runtime paketi (paddle/ klasöründen derlenir). Modeller ve çalışma zamanı ilk kullanımda
 // bir kez indirilir ve önbellekte (zrapor-ocr-*) saklanır; uygulama sürümü değişince silinmez.
 // vendor/paddle.js değişince: ?p= burada ve js/paddle-worker.js'de; ort = paddle/package.json'daki onnxruntime-web sürümü
-const PADDLE={js:'vendor/paddle.js?p=2',ort:'1.31.1',det:'PP-OCRv6_small_det',rec:'PP-OCRv6_small_rec',
+const PADDLE={js:'vendor/paddle.js?p=2',ort:'1.31.1',det:'PP-OCRv5_mobile_det',rec:'PP-OCRv6_small_rec',
   // modeller Z Raporu sitesinden (aynı adres, önbellek ortak): Baidu sunucusu Türkiye'den ~200 KB/sn veriyordu. Eski adresle inmişler yeniden inmez.
-  base:location.hostname.endsWith('github.io')?new URL('/Zraporu/model/',location.href).href:'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/',eski:'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/',mb:{det:9.9,rec:21.3,wasm:14.8}};
+  base:location.hostname.endsWith('github.io')?new URL('/Zraporu/model/',location.href).href:'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/',eski:'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/',mb:{det:4.8,rec:21.3,wasm:14.8}};
+// v33: algılama modeli PP-OCRv5_mobile_det oldu (Z Raporu ile aynı); eski modeli önbellekten sil
+setTimeout(()=>{caches.open('zrapor-ocr-1').then(c=>c.keys().then(ks=>Promise.all(ks.filter(r=>/PP-OCRv6_small_det/.test(r.url)).map(r=>c.delete(r))))).catch(()=>{})},3000);
 const OCR_CACHE='zrapor-ocr-1';
 // Büyük dosya indirme: yarıda kalırsa (ekran kapandı, uygulama arka plana geçti, bağlantı koptu) kaldığı yerden sürer.
 // iPhone arka planda indirmeye izin vermez; uygulama yeniden öne gelince Range ile kalan kısım istenir (sunucu desteklemezse baştan).
