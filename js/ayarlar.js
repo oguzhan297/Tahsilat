@@ -55,6 +55,7 @@ async function ghGonder(klasor,dosyalar){const mesaj=`Tahsilat okuma hatası bil
   }catch(e){if(e.durum===401)throw e;
     for(const d of dosyalar)await ghYukle(`tahsilat/${klasor}/${d.ad}`,d.b64,mesaj)}}
 $('#ghkey').value=S.ghKey||'';
+$('#csvpc').checked=S.csvPC!==false;$('#csvpc').addEventListener('change',e=>{S.csvPC=e.target.checked;saveS()});
 $('#ghkey').addEventListener('change',e=>{S.ghKey=e.target.value.trim();e.target.value=S.ghKey;saveS();$('#ghres').textContent=''});
 $('#ghpaylas').onclick=async()=>{const k=S.ghKey;if(!k){toast('Önce anahtarı gir');return}
   try{if(navigator.share){await navigator.share({text:k});return}}catch(e){if(e&&e.name==='AbortError')return}
