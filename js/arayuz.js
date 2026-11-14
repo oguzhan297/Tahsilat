@@ -4,7 +4,7 @@ const FLT={q:'',f:'tum'};
 const SUZ={tum:r=>true,kontrol:r=>isBad(r),yeni:r=>!r.akt,akt:r=>!!r.akt};
 function araUyar(r,q){if(!q)return true;const d=r.d,t=[d.firma,d.tarih,d.evrak_no,d.aciklama,fm(d.toplam),fm(d.kart),fm(d.nakit),fm(d.cek),d.not].join(' ').toLocaleLowerCase('tr-TR');
   return q.toLocaleLowerCase('tr-TR').split(/\s+/).filter(Boolean).every(w=>t.includes(w)||t.replace(/\./g,'').includes(w.replace(/\./g,'')))}
-const gorunur=r=>r.status!=='done'||(SUZ[FLT.f](r)&&araUyar(r,FLT.q));
+const gorunur=r=>r.status!=='done'||r.open||(SUZ[FLT.f](r)&&araUyar(r,FLT.q));   // açık (düzenlenen) kart süzgeçten çıksa da kapanana kadar görünür (Z Raporu'nda iPhone'da bulundu)
 function filtreUI(){const done=rows.filter(r=>r.status==='done'),el=$('#filtre');if(!el)return;el.hidden=done.length<3;
   for(const b of el.querySelectorAll('[data-f]')){const k=b.dataset.f;b.classList.toggle('on',FLT.f===k);b.querySelector('b').textContent=done.filter(SUZ[k]).length}}
 const aktTarih=(t,uzun)=>{const d=new Date(t);return uzun?d.toLocaleDateString('tr-TR'):`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`};

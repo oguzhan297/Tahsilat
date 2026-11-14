@@ -50,6 +50,8 @@ const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
 function cekirdek(){try{if(!self.crossOriginIsolated)return 1;const t=+localStorage.getItem('th_thr')||2;return Math.max(1,Math.min(t,2,navigator.hardwareConcurrency||2))}catch(e){return 1}}
 try{const o=KUTU.onceki;if(o&&o.olaylar){const ev=o.olaylar;let i=ev.length-1;while(i>=0&&ev[i].e!=='oku'&&ev[i].e!=='okundu')i--;
   const m=i>=0&&ev[i].e==='oku'&&/isci-(\d+)/.exec(ev[i].motor||'');if(m&&+m[1]>1){localStorage.setItem('th_thr',String(Math.max(1,Math.floor(+m[1]/2))));kutu('cekirdekAzaldi',{eski:+m[1]})}}}catch(e){}
+// Bir kereye mahsus: eski sürümlerde çekirdekle ilgisiz kapanmalarda tek çekirdeğe düşülmüş olabilir — 2 çekirdeği yeniden dene
+try{if(!localStorage.getItem('th_thrsifir2')){localStorage.setItem('th_thrsifir2','1');localStorage.removeItem('th_thr')}}catch(e){}
 function tekCekirdegeDon(m){try{localStorage.setItem('th_thr','1')}catch(x){}kutu('cekirdekKapandi',{m:String(m||'').slice(0,120)})}
 async function paddleDosyalari(){
   if(onIndir){pdlProg&&pdlProg('Okuyucu indiriliyor…');try{await onIndir}catch(e){}}   // önceden indirme sürüyorsa aynı dosyaları ikinci kez indirme
