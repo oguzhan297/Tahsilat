@@ -3,7 +3,7 @@
 // her okuma geçişinde yalnız ayarları yollar; buradan sadece bulunan metin kutuları (poly, text, score) döner.
 // vendor/paddle.js değişince ?p= elle; goruntu.js ?v= değerini arac/surum.mjs günceller.
 import '../vendor/paddle.js?p=2';
-import './goruntu.js?v=36';
+import './goruntu.js?v=37';
 
 const L = globalThis.PaddleOCRLib, G = globalThis.ZGoruntu;
 let ocr = null, cv = null;
@@ -15,11 +15,12 @@ onmessage = async e => {
     if (m.t === 'init') {
       L.ort.env.wasm.wasmBinary = m.wasm;           // çalışma zamanı sayfanın önbelleğinden
       // yükleyici (mjs) aynı adresten: çok çekirdekte yardımcı iş parçacıkları buradan açılır
-      const yollar = m.mjs ? { mjs: m.mjs, wasm: m.wasmDir + 'ort-wasm-simd-threaded.wasm' } : m.wasmDir;
+      let yollar = m.mjs ? { mjs: m.mjs, wasm: m.wasmDir + 'ort-wasm-simd-threaded.wasm' } : m.wasmDir;
+      let thr = self.crossOriginIsolated && m.thr > 1 ? m.thr : 1;
+      // yükleyiciyi önceden içe aktar: işçide ORT'nin kendi içe aktarması takılıp "Detection model timed out" ile bitiyordu.
+      // Yüklenemezse (yanlış MIME, önbellek) yerel yükleyiciden vazgeç: ORT CDN'dekini kullanır, okuma takılmaz
+      if (m.mjs) { try { await import(m.mjs); } catch (e) { yollar = m.wasmDir; thr = 1; } }
       L.ort.env.wasm.wasmPaths = yollar;
-      const thr = self.crossOriginIsolated && m.thr > 1 ? m.thr : 1;
-      // yükleyiciyi önceden içe aktar: işçide ORT'nin kendi içe aktarması takılabiliyordu ("Detection model timed out")
-      if (m.mjs) await import(m.mjs);
       const u = b => URL.createObjectURL(new Blob([b])), dU = u(m.det), rU = u(m.rec);
       try {
         ocr = await L.PaddleOCR.create({ textDetectionModelName: m.detName, textDetectionModelAsset: { url: dU },
