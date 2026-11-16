@@ -296,7 +296,7 @@
     }
     if (!d.firma) unsure.push('firma');
     const found = (d.firma ? 1 : 0) + (d.tarih ? 1 : 0) + (d.evrak_no ? 1 : 0) + (top != null ? 1 : 0);
-    const makbuz = pos || /TAHS[I1]LAT|MAKBUZ|TAHS[I1]L\sED/.test(all);
+    const makbuz = pos || el || /TAHS[I1]LAT|MAKBUZ|TAHS[I1]L\sED|AL[I1]ND[I1]S?[I1]?\b|CEK\s?[-–]?\s?NAK[I1]T|KALAN\sBAK[I1]YE/.test(all);   // “Çek - Nakit Alındısı” (Birlik) formu da tahsilat makbuzu
     return { d, unsure: [...new Set(unsure)], notes, found, el, pos, makbuz, cnt, tarihKesin: t.kesin };
   }
 
@@ -361,5 +361,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 45, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 46, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
