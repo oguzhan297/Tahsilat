@@ -94,7 +94,7 @@
     }
     for (let i = 0; i < lines.length; i++) {
       const e = F[i].search(/TA[RN][I1]H|TAR[I1][BN]/); if (e < 0) continue;
-      const r = lines[i].slice(e).replace(/^\S*?(?=[\d(|\[])/, '').slice(0, 18).replace(/[(|\[\]lI!]/g, '1').replace(/[^\d]/g, '');
+      const r = lines[i].slice(e).replace(/^\S*?(?=[\d(|\[])/, '').slice(0, 18).replace(/[(|\[\]lI!]/g, '1').replace(/[Tt](?=\d)/g, '1').replace(/[^\d]/g, '');   // "24t012026": T = el yazısı 1
       const m = r.match(/^(\d{2})(\d{2})(20\d{2})/) || r.match(/^(\d{1,2})(\d{2})(20\d{2})$/);
       if (m && gecerli(+m[1], +m[2], +m[3]) && new Date(+m[3], +m[2] - 1, +m[1]) > Date.now() - 400 * 864e5) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
     }
@@ -102,7 +102,42 @@
       const m = lines[i].match(/(?<![\d.,])(\d{1,2})\s?[.,\/-]\s?(\d{1,2})\s?(?:[.,\/|-]\s?1?|1)(?=20\d{2}(?!\d))\s?(20\d{2})(?!\d)/);   // "13,1012026", "27.10.12026": eğik çizgi 1 okunmuş
       if (m && gecerli(+m[1], +m[2], +m[3])) return { v: trh(+m[1], +m[2], +m[3]), kesin: false };
     }
+    // Son çare (el yazısı koçanlar): TARİH yanındaki rakamlardan aday tarihler üretip puanla — her zaman işaretli
+    for (let i = 0; i < lines.length; i++) {
+      const m = /TA[RN][I1][HBN](?![A-Z])/.exec(F[i]); if (!m) continue;
+      // işaret sözcüğünden sonrası; ilk harf sözcüğünde (SIRA, ÇEKİN…) durur — tablo başlığı "TARİHİ ÇEKİN TUTARI" rakam üretmesin
+      const s = lines[i].slice(m.index + m[0].length).replace(/^[\s:.;,]+/, '').split(/[A-Za-zÇĞİÖŞÜçğıöşü]{2,}/)[0];
+      const a = tarihAday(s.slice(0, 22)); if (a) return { v: a, kesin: false };
+    }
     return { v: null, kesin: false };
+  }
+  // El yazısı tarih: "22.10..../26", "31(0120.26" (1 → "("), "31.110.12026" (eğik çizgi 1 okunmuş), "TARIH 24.10" (yıl yok).
+  // Rakamlar tek diziye indirilir; baştan gün ve ay alınır (sahte "1"ler silinebilir), kalan kısım yıl gibi görünmeli
+  // ("", "26", "2026", "12026", "202"…). Geçersiz ya da gelecekteki tarih elenir; silme, tek haneli gün/ay ve eski tarih puan kaybettirir.
+  function tarihAday(s) {
+    const r = s.replace(/[(|\[\])!lI]/g, '1').replace(/[OoQD]/g, '0').replace(/[Tt](?=\d)/g, '1').replace(/[^\d]/g, '').slice(0, 12);
+    if (r.length < 3) return null;
+    const bugun = new Date(), y0 = bugun.getFullYear(), adaylar = [];
+    const sil = (t, n) => { const out = [{ t, n: 0 }]; if (n < 1) return out;   // ilk 6 hanedeki "1"lerden en çok n tanesini sil
+      for (let k = 0; k < Math.min(6, t.length); k++) if (t[k] === '1') for (const x of sil(t.slice(0, k) + t.slice(k + 1), n - 1)) out.push({ t: x.t, n: x.n + 1 });
+      return out; };
+    for (const { t, n } of sil(r, 2)) for (const lg of [2, 1]) for (const la of [2, 1]) {
+      if (t.length < lg + la) continue;
+      const g = +t.slice(0, lg), ay = +t.slice(lg, lg + la), kalan = t.slice(lg + la).replace(/^1(?=20)/, '');
+      let yil = null, tahmin = false;
+      if (/^20\d{2}$/.test(kalan)) yil = +kalan; else if (/^2\d$/.test(kalan)) yil = 2000 + +kalan;
+      else if (kalan === '' || /^20?2?$/.test(kalan) || /^202\d{1,2}$/.test(kalan)) tahmin = true; else continue;
+      if (yil != null && yil !== y0 && yil !== y0 - 1) { tahmin = true; yil = null; }
+      for (const y of yil != null ? [yil] : [y0, y0 - 1]) {
+        if (!gecerli(g, ay, y)) continue;
+        const gun = (bugun - new Date(y, ay - 1, g)) / 864e5; if (gun > 400) continue;
+        adaylar.push({ v: trh(g, ay, y), p: n * 1.2 + (lg === 1 ? 1 : 0) + (la === 1 ? .6 : 0) + (tahmin ? .3 : 0) + gun / 60 });
+        break;   // yıl tahmininde en yakın geçerli yıl yeter
+      }
+    }
+    if (!adaylar.length) return null;
+    adaylar.sort((x, y) => x.p - y.p);
+    return adaylar[0].p <= 3.5 ? adaylar[0].v : null;
   }
 
   // ---- Firma ----
@@ -361,5 +396,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 47, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 48, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
