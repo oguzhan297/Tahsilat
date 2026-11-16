@@ -63,7 +63,7 @@ function render0(){
     let g='',inSec=false;
     for(const f of FIELDS){
       if(f.sec){if(inSec)g+='</div></section>';g+=`<section class="grp${f.x?' grp-x':''}"><div class="grp-h">${secHTML(f.sec)}</div><div class="grid">`;inSec=true}
-      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.k==='tarih'?'inputmode="numeric" enterkeyhint="done"':f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
+      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.k==='tarih'?'inputmode="numeric" enterkeyhint="done"':f.k==='firma'?'list="firmalist" autocomplete="off" autocapitalize="words"':f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
     }
     if(inSec)g+='</div></section>';
     return `<div class="card${r.open?' open':''}" id="c_${r.id}">
@@ -274,3 +274,6 @@ $('#ara').addEventListener('input',e=>{FLT.q=e.target.value.trim();render()});
   if(window.visualViewport)visualViewport.addEventListener('resize',()=>setTimeout(kbDenetle,60));
   document.addEventListener('touchstart',()=>setTimeout(kbDenetle,300),{passive:true});
 })();
+
+// Firma alanına dokununca öneri listesi güncel olsun (yazdıkça kayıtlı firmalar önerilir)
+document.addEventListener('focusin',e=>{if(e.target&&e.target.matches&&e.target.matches('input[data-k="firma"]'))firmaListesi()});
