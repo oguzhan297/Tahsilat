@@ -73,7 +73,7 @@ async function fotoBitmap(src){
   const c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
   const b=await createImageBitmap(c);c.width=c.height=1;return b;
 }
-function isciMotoru(f,thr=1){
+function isciMotoru(f,thr=1,sure){
   return new Promise((ok,no)=>{
     let w;try{w=new Worker(`js/paddle-worker.js?v=${APP_VER}`,{type:'module'})}catch(e){return no(e)}
     let n=0,olu=false;const bek=new Map();
@@ -81,7 +81,7 @@ function isciMotoru(f,thr=1){
     const bitir=er=>{if(olu)return;olu=true;for(const x of bek.values())x.b(er);bek.clear();try{w.terminate()}catch(e){}};
     w.onmessage=e=>{const m=e.data;if(m.hazir)return;const x=bek.get(m.n);if(!x)return;bek.delete(m.n);m.ok?x.a(m):x.b(new Error(m.err||'İşçi hatası'))};
     w.onerror=e=>{e.preventDefault&&e.preventDefault();const er=new Error('İşçi açılamadı'+(e.message?': '+e.message:''));bitir(er);no(er)};
-    const zm=setTimeout(()=>{const er=new Error('İşçi zamanında hazır olmadı');bitir(er);no(er)},thr>1?90000:120000);
+    const zm=setTimeout(()=>{const er=new Error('İşçi zamanında hazır olmadı');bitir(er);no(er)},sure||(thr>1?90000:120000));
     gonder({t:'init',det:f.det,rec:f.rec,wasm:f.wasm,wasmDir:f.wasmDir,mjs:f.mjs,thr,detName:PADDLE.det,recName:PADDLE.rec},[f.det,f.rec,f.wasm]).then(c=>{clearTimeout(zm);
       ok({tur:'isci',thr:c&&c.thr||thr,olu:()=>olu,
         async resim(id,src){const bmp=await fotoBitmap(src);await gonder({t:'img',id,bmp},[bmp])},
@@ -109,8 +109,12 @@ async function getPaddle(onProg){
     // modül işçi + OffscreenCanvas varsa işçide; yoksa ya da işçi başarısızsa sayfada
     if(!isciYok&&typeof Worker!=='undefined'&&typeof OffscreenCanvas!=='undefined'&&typeof createImageBitmap==='function'){
       const thr=cekirdek();
-      if(thr>1)try{pdl=await isciMotoru(await paddleDosyalari(),thr);kutu('motor',{thr});return pdl}
-        catch(e){if(/indirilemedi/.test(e&&e.message||''))throw e;tekCekirdegeDon(e&&e.message);console.warn('Çok çekirdekli okuyucu açılamadı, tek çekirdekle okunacak:',e)}
+      // Çok çekirdekli işçi bazen hiç hazır olmuyor (testte ~3-5 açılışta bir; açılan ~4 sn'de açılır). Eskiden 90 sn beklenip
+      // çok çekirdek kalıcı kapatılıyordu. Şimdi 20 sn'de vazgeçip yeni işçiyle üç kez denenir; hepsi olmazsa kalıcı kapatılır.
+      if(thr>1){let son=null;
+        for(let d=0;d<3;d++){try{pdl=await isciMotoru(await paddleDosyalari(),thr,20000);kutu('motor',{thr,...(d?{deneme:d+1}:{})});return pdl}
+          catch(e){if(/indirilemedi/.test(e&&e.message||''))throw e;son=e;kutu('isciAcilmadi',{d,m:String(e&&e.message||e).slice(0,80)});await new Promise(a=>setTimeout(a,500))}}
+        tekCekirdegeDon(son&&son.message);console.warn('Çok çekirdekli okuyucu açılamadı, tek çekirdekle okunacak:',son)}
       try{pdl=await isciMotoru(await paddleDosyalari());return pdl}
       catch(e){if(/indirilemedi/.test(e&&e.message||''))throw e;isciYok=true;console.warn('PaddleOCR işçisi kullanılamadı, sayfada okunacak:',e)}
     }
