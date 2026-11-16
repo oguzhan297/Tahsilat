@@ -142,6 +142,10 @@ function ankBul(items){if(!items||!items.w)return null;const W=items.w,H=items.h
       if(k==='tarih'&&/CEK|VADE|\bV\.?\s?TAR|BANKA|SUBE/.test(t))continue;
       if(puan[k]===p&&ust>=(yer[k]??1))continue;
       out[k]=kutu(i,m.index,m[0].length);puan[k]=p;yer[k]=ust}}
+  // rakamlı kutular (konum + rakamlar): el yazısı örneği onaylanan değerin tam yazıldığı yerden kesilsin (ornek.js degerKutusu)
+  const sayi=[];for(const i of items){if(!i.poly||!i.poly.length)continue;const r=String(i.text||'').replace(/\D/g,'');if(r.length<2)continue;
+    const xs=i.poly.map(p=>p[0]),ys=i.poly.map(p=>p[1]);sayi.push([+(Math.min(...xs)/W).toFixed(4),+(Math.min(...ys)/H).toFixed(4),+(Math.max(...xs)/W).toFixed(4),+(Math.max(...ys)/H).toFixed(4),r.slice(0,24)]);if(sayi.length>=60)break}
+  if(sayi.length)out.sayi=sayi;
   return Object.keys(out).length?out:null}
 // PaddleOCR kutularını satırlara diz: eğikliği düzelt, aynı yükseklikteki kutuları soldan sağa birleştir
 function paddleLines(items){
