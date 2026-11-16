@@ -47,11 +47,13 @@ let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false;
 // Yardımcı iş parçacıkları ORT'nin yükleyicisinden (vendor/ort-wasm-simd-threaded.mjs, ORT sürümüyle aynı) açılır. Sorun çıkarsa tek çekirdeğe dönülür (th_thr='1').
 const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
 // Üst sınır 2: Z Raporu'nda iPhone'da 4 çekirdekle uzun okumada sayfa bellekten kapandı. Okurken çökme olursa tek çekirdeğe iner.
-function cekirdek(){try{if(!self.crossOriginIsolated)return 1;const t=+localStorage.getItem('th_thr')||1;return Math.max(1,Math.min(t,2,navigator.hardwareConcurrency||2))}catch(e){return 1}}
+function cekirdek(){try{if(!self.crossOriginIsolated)return 1;const t=+localStorage.getItem('th_thr')||2;return Math.max(1,Math.min(t,2,navigator.hardwareConcurrency||2))}catch(e){return 1}}
 try{const o=KUTU.onceki;if(o&&o.olaylar){const ev=o.olaylar;let i=ev.length-1;while(i>=0&&ev[i].e!=='oku'&&ev[i].e!=='okundu')i--;
   const m=i>=0&&ev[i].e==='oku'&&/isci-(\d+)/.exec(ev[i].motor||'');if(m&&+m[1]>1){localStorage.setItem('th_thr',String(Math.max(1,Math.floor(+m[1]/2))));kutu('cekirdekAzaldi',{eski:+m[1]})}}}catch(e){}
 // Bir kereye mahsus: eski sürümlerde çekirdekle ilgisiz kapanmalarda tek çekirdeğe düşülmüş olabilir — 2 çekirdeği yeniden dene
-try{if(!localStorage.getItem('th_thrsifir2')){localStorage.setItem('th_thrsifir2','1');localStorage.removeItem('th_thr')}}catch(e){}
+// v47: varsayılan yeniden 2 çekirdek — gerçek iPhone 16 Pro'da 74 makbuz tek seferde eklenip çökmeden okundu (tek çekirdekten ~%13 hızlı).
+// v39 çökmesinden sonra telefonda kalmış th_thr='1' bir kez silinir; 2 çekirdekte çökerse yukarıdaki kural yine tek çekirdeğe indirir.
+try{if(!localStorage.getItem('th_thrsifir3')){localStorage.setItem('th_thrsifir3','1');localStorage.setItem('th_thrsifir2','1');localStorage.removeItem('th_thr')}}catch(e){}
 function tekCekirdegeDon(m){try{localStorage.setItem('th_thr','1')}catch(x){}kutu('cekirdekKapandi',{m:String(m||'').slice(0,120)})}
 async function paddleDosyalari(){
   if(onIndir){pdlProg&&pdlProg('Okuyucu indiriliyor…');try{await onIndir}catch(e){}}   // önceden indirme sürüyorsa aynı dosyaları ikinci kez indirme
