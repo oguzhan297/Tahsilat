@@ -78,7 +78,7 @@ async function pump(){if(busy)return;busy=true;
   while(KAM.akis)await new Promise(a=>setTimeout(a,400));   // kamera açıkken bekle: kapanınca okumaya başla
   // Uzun seride işlemci aralıksız çalışınca telefon ısınıyor: makbuzlar arasında kısa nefes
   while(queue.length){while(KAM.akis)await new Promise(a=>setTimeout(a,400));   // okuma sürerken kamera açıldıysa da bekle
-    const r=queue.shift();if(!rows.includes(r))continue;if(await prep(r))await extract(r);if(queue.length&&S.mode!=='api')await new Promise(a=>setTimeout(a,nefes(r)))}
+    const r=queue.shift();if(!rows.includes(r))continue;if(await prep(r))await extract(r);if(r.status==='done'&&isBad(r))otoBildir(r,'kontrol');if(queue.length&&S.mode!=='api')await new Promise(a=>setTimeout(a,nefes(r)))}
   busy=false}
 
 async function onFiles(list){

@@ -124,15 +124,22 @@ async function getPaddle(onProg){
   return pdlLoading;
 }
 // Elle tamamlama için: "Tarih", "Nakit / Toplam / Tutar" etiketlerinin fotoğraftaki yeri (0–1 oranında [x0,y0,x1,y1])
-function ankBul(items){if(!items||!items.w)return null;const W=items.w,H=items.h,out={},puan={};
+function ankBul(items){if(!items||!items.w)return null;const W=items.w,H=items.h,out={},puan={},yer={};
   const F=s=>String(s||'').toLocaleUpperCase('tr-TR').replace(/[İI]/g,'I').replace(/Ş/g,'S').replace(/Ç/g,'C').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O');
   // kutu uzun bir satırsa etiketin satır içindeki yerini harf sırasından tahmin et
   const kutu=(i,at,len)=>{const xs=i.poly.map(p=>p[0]),ys=i.poly.map(p=>p[1]);let x0=Math.min(...xs),x1=Math.max(...xs);const n=String(i.text||'').length||1;
     if(at>0&&n>len+3){const w=x1-x0;x0+=w*at/n}return [x0/W,Math.min(...ys)/H,x1/W,Math.max(...ys)/H]};
-  const KAL=[['tarih',/TA[RN]I[HBN]|TANIH/,1],['tutar',/\bNAKIT\b/,1],['tutar',/TOPLAM(?!\s?CAR)|YEKUN/,2],['tutar',/TAHSIL\s?ED/,3],['tutar',/\bTUTAR/,4],
+  const KAL=[['tarih',/TA[RN]I[HBN]|TANIH/,1],['tutar',/\bNAKIT\b/,1],['tutar',/TOPLAM(?!\s?CAR)|YEKUN/,2],['tutar',/TAHSIL\s?ED(?!EN\b)/,3],['tutar',/\bTUTAR/,4],
     ['no',/№|(^|\s)N[O°º2]?\s?0\d{3,}|\bSIRA\b|\bSERI\s?[A-Z]\b|MAKBUZ\s?NO|EVRAK\s?NO/,1]];
+  // Aynı öncelikte birden çok aday varsa en üstteki seçilir (etiketler üstte, tablo başlıkları aşağıda; algılama sırası yukarıdan aşağıya değil).
+  // "ÇEKİN TARİHİ" / "V. Tarihi" tablo başlığı tarih etiketi sayılmaz; "TAHSİL EDEN" (imza kutusu) tutar etiketi sayılmaz
+  // (gelen örneklerde tarih kırpıntısı çek tablosuna, tutar kırpıntısı imza adına düşmüştü).
   for(const i of items){if(!i.poly||!i.poly.length)continue;const t=F(i.text);if(/BAKIYE|KALAN|CEK\s?NO|HESAP|\bCAD\b|\bSK\b|\bMAH\b|TEL\b/.test(t)&&!/TARIH|NAKIT|SIRA|№/.test(t))continue;
-    for(const [k,re,p] of KAL){const m=t.match(re);if(!m||(puan[k]&&puan[k]<=p))continue;out[k]=kutu(i,m.index,m[0].length);puan[k]=p}}
+    const ust=Math.min(...i.poly.map(p=>p[1]))/H;
+    for(const [k,re,p] of KAL){const m=t.match(re);if(!m||(puan[k]&&puan[k]<p))continue;
+      if(k==='tarih'&&/CEK|VADE|\bV\.?\s?TAR|BANKA|SUBE/.test(t))continue;
+      if(puan[k]===p&&ust>=(yer[k]??1))continue;
+      out[k]=kutu(i,m.index,m[0].length);puan[k]=p;yer[k]=ust}}
   return Object.keys(out).length?out:null}
 // PaddleOCR kutularını satırlara diz: eğikliği düzelt, aynı yükseklikteki kutuları soldan sağa birleştir
 function paddleLines(items){

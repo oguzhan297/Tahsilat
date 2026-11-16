@@ -2,6 +2,10 @@
 // Bir firma iki yoldan tanınır: makbuzdaki basılı telefon numarası ve okuyucunun okuduğu yazılış.
 // Hazır tanımlar (FIRMA0 / FIRMA_TEL0) koddadır; onlara yapılan değişiklikler FIRMA_EK'te saklanır.
 const FM={acik:null,ara:''};
+// Listeden kaldırılan firmalar: yalnız makbuz kartlarında geçen (tanıma tablosunda olmayan) bir firma silinince tabloda silinecek bir şey
+// kalmıyor, kartlardaki ad listeye geri getiriyordu ("firmayı silemiyorum"). Ad burada tutulur, tanıma kazanınca geri gelir.
+let FM_GIZLI=new Set();try{FM_GIZLI=new Set(JSON.parse(localStorage.getItem('th_fm_gizli')||'[]'))}catch(e){}
+const fmGizliKaydet=()=>{try{localStorage.setItem('th_fm_gizli',JSON.stringify([...FM_GIZLI]))}catch(e){}};
 
 function telTemiz(s){let n=String(s||'').replace(/\D/g,'').replace(/^90(?=\d{10}$)/,'');if(/^[2-5]\d{9}$/.test(n))n='0'+n;return /^0[2-5]\d{8,9}$/.test(n)?n:null}
 const telGoster=t=>t.length===11?`${t.slice(0,4)} ${t.slice(4,7)} ${t.slice(7,9)} ${t.slice(9)}`:t;
@@ -12,6 +16,7 @@ function firmaTablo(){const m=new Map(),al=ad=>{if(!m.has(ad))m.set(ad,{ad,tel:[
   for(const [T,h] of [[FIRMA,false],[FIRMA0,true]])for(const k in T){const f=al(T[k]);if(k!==nkey(f.ad)&&!f.yaz.some(x=>x.k===k))f.yaz.push({k,hazir:h&&!(k in FIRMA)})}
   for(const r of rows){const a=r.d&&r.d.firma;if(a)al(a).kart++}
   for(const f of m.values()){const k=nkey(f.ad);f.bilinen=!!(f.tel.length||f.yaz.length||FIRMA[k]===f.ad||FIRMA0[k]===f.ad)}
+  for(const f of [...m.values()])if(FM_GIZLI.has(f.ad)){if(f.bilinen){FM_GIZLI.delete(f.ad);fmGizliKaydet()}else m.delete(f.ad)}   // yeniden tanıtılan firma listeye döner
   return [...m.values()].sort((a,b)=>a.ad.localeCompare(b.ad,'tr'))}
 
 // Kartlardaki adı değiştir (Luca'ya aktarılmış kartlara dokunma). Açıklama firmadan üretildiyse o da yenilenir.
@@ -31,9 +36,10 @@ function firmaYeniAd(eski,yeni){
 
 function telSil(t){delete FIRMA_TEL[t];if(t in FIRMA_TEL0){delete FIRMA_TEL0[t];FIRMA_EK.sil.push('t:'+t)}firmaKaydet()}
 function yazSil(k){delete FIRMA[k];if(k in FIRMA0){delete FIRMA0[k];FIRMA_EK.sil.push('n:'+k)}firmaKaydet()}
-function firmaSil(ad){const f=firmaTablo().find(x=>x.ad===ad);if(!f)return;
+function firmaSil(ad){const f=firmaTablo().find(x=>x.ad===ad)||{tel:[],yaz:[]};
   for(const x of f.tel)telSil(x.t);for(const x of f.yaz)yazSil(x.k);
-  const k=nkey(ad);if(FIRMA[k]===ad||FIRMA0[k]===ad)yazSil(k)}
+  const k=nkey(ad);if(FIRMA[k]===ad||FIRMA0[k]===ad)yazSil(k);
+  FM_GIZLI.add(ad);fmGizliKaydet()}
 function telEkle(ad,t){FIRMA_TEL[t]=ad;FIRMA_EK.sil=FIRMA_EK.sil.filter(x=>x!=='t:'+t);firmaKaydet()}
 
 function firmaHTML(f){const ac=FM.acik===f.ad,ozet=[f.tel.length?`${f.tel.length} telefon`:'',f.yaz.length?`${f.yaz.length} yazılış`:'',f.kart?`${f.kart} makbuz`:''].filter(Boolean).join(' · ')||'yalnız ad';
@@ -46,7 +52,7 @@ function firmaHTML(f){const ac=FM.acik===f.ad,ozet=[f.tel.length?`${f.tel.length
       <div class="keyrow"><input class="fm-telin" inputmode="tel" placeholder="0372 266 44 00"><button class="btn small" type="button" data-fm="telekle">Ekle</button></div>
       <label class="fm-l">Okunan yazılışlar <span>(okuyucu böyle okursa bu firma sayılır)</span></label>
       <div class="fm-cip">${f.yaz.map(x=>`<span class="fm-c">${esc(x.k)}<button type="button" data-fm="yazsil" data-v="${esc(x.k)}" aria-label="Yazılışı kaldır">×</button></span>`).join('')||'<span class="hint">Yok — ad tam okunursa yine tanınır</span>'}</div>
-      ${f.bilinen?'<div class="set-row"><button class="btn small danger" type="button" data-fm="sil">Firmayı sil</button></div>':'<div class="hint">Bu ad yalnız makbuz kartlarında geçiyor; telefon eklersen uygulama firmayı tanımaya başlar.</div>'}</div>`}
+      ${f.bilinen?'':'<div class="hint">Bu ad yalnız makbuz kartlarında geçiyor; telefon eklersen uygulama firmayı tanımaya başlar.</div>'}<div class="set-row"><button class="btn small danger" type="button" data-fm="sil">${f.bilinen?'Firmayı sil':'Listeden kaldır'}</button></div></div>`}
   return h+'</div>'}
 
 function firmaCiz(){const q=nkey(FM.ara),l=firmaTablo().filter(f=>!q||nkey(f.ad).includes(q)||f.tel.some(x=>x.t.includes(FM.ara.replace(/\D/g,'')||'#')));
@@ -79,7 +85,7 @@ $('#fmliste').addEventListener('click',e=>{const b=e.target.closest('[data-fm]')
     telEkle(ad,t);firmaGuncel();return}
   if(is==='telsil'){telSil(b.dataset.v);firmaGuncel();return}
   if(is==='yazsil'){yazSil(b.dataset.v);firmaGuncel();return}
-  if(is==='sil'){if(!confirm(`"${ad}" silinsin mi?\n\nUygulama bu firmayı artık kendiliğinden tanımaz. Makbuz kartlarındaki ad değişmez.`))return;
+  if(is==='sil'){if(!confirm(`"${ad}" silinsin mi?\n\nUygulama bu firmayı artık kendiliğinden tanımaz${kutu.querySelector('[data-fm="telsil"],[data-fm="yazsil"]')?'':' (listeden kalkar)'}. Makbuz kartlarındaki ad değişmez.`))return;
     firmaSil(ad);FM.acik=null;firmaGuncel();toast('Firma silindi')}});
 $('#fmliste').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const i=e.target;
   if(i.classList.contains('fm-telin')){e.preventDefault();i.closest('.fm-f').querySelector('[data-fm="telekle"]').click()}

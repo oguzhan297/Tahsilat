@@ -26,7 +26,7 @@ function bildirKutuHTML(r){return `<div class="duz bildirkutu" id="bk-${r.id}" $
 async function bildirFoto(b,u){if(!b||b.size<1.5e6)return u;try{const bm=await createImageBitmap(b,{imageOrientation:'from-image'});
   const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);bm.close&&bm.close();
   const y=c.toDataURL('image/jpeg',.88);c.width=c.height=1;return y.length<u.length?y:u}catch(e){return u}}
-async function hataBildir(r,not='',dugme){
+async function hataBildir(r,not='',dugme,sessiz=false){
   const k=duzeltilen(r);let foto=null,asil=[];try{foto=r.thumb&&r.thumb.startsWith('data:')?r.thumb:await IDB.get('imgs',r.id)}catch(e){}
   // fotoğrafın aslı saklıysa onu da ekle (test arşivi için en değerlisi)
   try{const o=r.hasOrig?await IDB.get('orig',r.id):null;for(const b of o||[])asil.push(await new Promise((a,h)=>{const f=new FileReader();f.onload=()=>a(f.result);f.onerror=h;f.readAsDataURL(b)}).then(u=>bildirFoto(b,u)))}catch(e){}
@@ -39,12 +39,13 @@ async function hataBildir(r,not='',dugme){
     const klasor=`${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}_${ad}_${Math.random().toString(36).slice(2,6)}`;
     const fotolar=(asil.length?asil:foto&&foto.startsWith('data:')?[foto]:[]).map((u,i)=>({ad:`foto-${i+1}${asil.length?'':'-kucuk'}.jpg`,b64:u.slice(u.indexOf(',')+1)}));
     const govde={...paket,foto_asil:undefined,foto_kucuk:undefined,fotolar:fotolar.map(f=>f.ad)};
-    const eski=dugme&&dugme.innerHTML;if(dugme){dugme.disabled=true;dugme.textContent='Gönderiliyor…'}toast('Gönderiliyor… uygulamayı kullanmaya devam edebilirsin');
+    const eski=dugme&&dugme.innerHTML;if(dugme){dugme.disabled=true;dugme.textContent='Gönderiliyor…'}if(!sessiz)toast('Gönderiliyor… uygulamayı kullanmaya devam edebilirsin');
     try{await ghGonder(klasor,[{ad:'bildirim.json',b64:b64Metin(JSON.stringify(govde,null,1))},...fotolar]);
-      r.bildirildi=Date.now();save(r);toast('✓ Bildirim gönderildi, teşekkürler');return true}
-    catch(e){toast('Gönderilemedi ('+(e.message==='Failed to fetch'?'bağlantı yok':e.message)+'); dosya olarak paylaşılıyor')}
+      if(!sessiz){r.bildirildi=Date.now();save(r);toast('✓ Bildirim gönderildi, teşekkürler')}return true}
+    catch(e){if(sessiz)throw e;toast('Gönderilemedi ('+(e.message==='Failed to fetch'?'bağlantı yok':e.message)+'); dosya olarak paylaşılıyor')}
     finally{if(dugme){dugme.disabled=false;dugme.innerHTML=eski}}
   }
+  if(sessiz)return false;
   const ok=await offer(`okuma-hatasi_${ad}.json`,JSON.stringify(paket,null,1));
   if(ok){r.bildirildi=Date.now();save(r);toast(asil.length?'Dosyada makbuzun fotoğrafı da var; sohbete göndermen yeterli':'Dosyayı makbuzun asıl fotoğrafıyla birlikte gönder')}
   return ok;
@@ -192,7 +193,7 @@ document.addEventListener('click',e=>{
   const kz=e.target.closest('img[data-kirp]');if(kz&&kz.dataset.bolge){const c=kz.closest('.card'),r=c&&rows.find(x=>'c_'+x.id===c.id);if(r)gvAc(r,kz.dataset.bolge.split(',').map(Number));return}
   const t=e.target.closest('[data-tog],[data-del],[data-retry],[data-zoom],[data-reparse],[data-copyocr],[data-recam],[data-regal],[data-f],[data-aktsil],[data-bildir],[data-bildirac],[data-devam],[data-claude],[data-onay]');if(!t)return;
   if(t.dataset.claude){const r=rows.find(x=>x.id===t.dataset.claude);if(r)claudeOku(r);return}
-  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){r.unsure=[];r.onay=true;save(r);refreshCard(r);ornekTopla([r]);const k=checks(r).find(c=>!c.ok&&!c.info);toast(k?'Onaylandı, ama bir uyarı kaldı: '+k.m:'Onaylandı')}return}
+  if(t.dataset.onay){const r=rows.find(x=>x.id===t.dataset.onay);if(r){if(duzeltilen(r).length)otoBildir(r,'onay');r.unsure=[];r.onay=true;save(r);refreshCard(r);ornekTopla([r]);const k=checks(r).find(c=>!c.ok&&!c.info);toast(k?'Onaylandı, ama bir uyarı kaldı: '+k.m:'Onaylandı')}return}
   if(t.dataset.devam){devId=t.dataset.devam;const i=$('#devam');i.value='';i.click();return}
   if(t.dataset.f){FLT.f=t.dataset.f;render();return}
   if(t.dataset.aktsil){const r=rows.find(x=>x.id===t.dataset.aktsil);r.akt=null;save(r);render();toast('Bir sonraki Luca dosyasına yeniden girecek');return}

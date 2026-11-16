@@ -63,3 +63,18 @@ $('#ghtest').onclick=async()=>{const t=$('#ghres');if(!S.ghKey){t.textContent='�
   try{const r=await ghIstek('');if(!r.ok)throw new Error(r.status===401?'anahtar geçersiz':'gelen kutusuna erişim yok ('+r.status+')');const j=await r.json();
     if(!j.permissions||!j.permissions.push)throw new Error('anahtarın yazma izni yok');t.textContent='✓ Gelen kutusu hazır';t.style.color='var(--ok)'}
   catch(e){t.textContent='✗ '+(e.message==='Failed to fetch'?'bağlantı yok':e.message);t.style.color='var(--err)'}};
+
+// Otomatik test arşivi: "Kontrol et" çıkan makbuz okunur okunmaz, elle düzeltilip onaylanan (Hepsi doğru / Luca'ya aktar) makbuz da
+// doğru değerleriyle gelen kutusuna sessizce gider (anahtar varsa). Saatlik görev bunları inceleyip okuyucuyu düzeltir.
+$('#otobildir').checked=S.otoBildir!==false;
+$('#otobildir').addEventListener('change',e=>{S.otoBildir=e.target.checked;saveS()});
+let otoZincir=Promise.resolve();
+function otoBildir(r,tur){if(!S.ghKey||S.otoBildir===false||!r||r.status!=='done')return;
+  const k=tur==='onay'?'otoOnay':'otoKontrol';if(r[k])return;r[k]=Date.now();save(r);
+  otoZincir=otoZincir.then(async()=>{
+    // okuma ve kamera bitsin (yükleme işlemciyi ve ağı onlarla paylaşmasın)
+    for(let i=0;i<600&&((typeof KAM!=='undefined'&&KAM.akis)||(typeof busy!=='undefined'&&busy));i++)await new Promise(a=>setTimeout(a,2000));
+    if(!rows.includes(r))return;
+    const not=tur==='onay'?'Otomatik: kullanıcı düzeltip onayladı (doğru değerler bunlar)':'Otomatik: okuma sonrası “Kontrol et” çıktı';
+    try{await hataBildir(r,not,null,true);kutu('otoBildir',{tur})}catch(e){r[k]=0;save(r)}
+  })}
