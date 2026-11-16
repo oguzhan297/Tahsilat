@@ -63,7 +63,7 @@ function render0(){
     let g='',inSec=false;
     for(const f of FIELDS){
       if(f.sec){if(inSec)g+='</div></section>';g+=`<section class="grp${f.x?' grp-x':''}"><div class="grp-h">${secHTML(f.sec)}</div><div class="grid">`;inSec=true}
-      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.k==='tarih'?'inputmode="numeric" enterkeyhint="done"':f.k==='firma'?'list="firmalist" autocomplete="off" autocapitalize="words"':f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
+      g+=`<div class="f${f.full?' full':''}${f.t==='num'?' num':''}"><label>${shortL(f)}</label><input data-id="${r.id}" data-k="${f.k}" ${f.k==='tarih'?'inputmode="numeric" enterkeyhint="done"':f.k==='firma'?'list="firmalist" autocomplete="off" autocapitalize="off"':f.t!=='text'?'inputmode="decimal"':''} class="${fcls(r,f)}" value="${esc(fv(f,r.d[f.k]))}" ${f.t==='num'?'placeholder="—"':''} aria-label="${esc(f.l)}"></div>`;
     }
     if(inSec)g+='</div></section>';
     return `<div class="card${r.open?' open':''}" id="c_${r.id}">
@@ -112,7 +112,7 @@ function hizliAlanlar(r){const u=r.unsure||[],a=[];if(u.includes('firma')||!r.d.
 function hizliHTML(r){const a=hizliAlanlar(r);if(!a.length||r.src==='elle'&&!r.thumb&&!r.hasImg)return '';
   const ad={firma:'Firma (listeden seçebilir ya da yazabilirsin)',tarih:'Tarih',evrak_no:'Evrak no',tutar:'Tutar'},ank={tarih:'tarih',evrak_no:'no',tutar:'tutar'};firmaListesi();
   const giris=k=>k==='tutar'?`<input class="hz" data-hizli="tutar" data-id="${r.id}" inputmode="decimal" enterkeyhint="next" placeholder="ör. 4230" value="${esc(fm(r.d.toplam))}">`
-    :k==='firma'?`<input class="hz" data-id="${r.id}" data-k="firma" list="firmalist" enterkeyhint="next" autocomplete="off" placeholder="makbuzu kesen firma" value="${esc(r.d.firma||'')}">`
+    :k==='firma'?`<input class="hz" data-id="${r.id}" data-k="firma" list="firmalist" enterkeyhint="next" autocomplete="off" autocapitalize="off" placeholder="makbuzu kesen firma" value="${esc(r.d.firma||'')}">`
     :k==='tarih'?`<input class="hz" data-id="${r.id}" data-k="tarih" inputmode="numeric" enterkeyhint="next" placeholder="ör. 2310 → 23.10" value="${esc(r.d.tarih||'')}">`
     :`<input class="hz" data-id="${r.id}" data-k="evrak_no" enterkeyhint="next" placeholder="makbuz no" value="${esc(r.d.evrak_no||'')}">`;
   return `<section class="hizli"><div class="hz-h">${ik('kalem')}Eksik alanlar <span>— fotoğrafa bakıp yaz, “ileri” ile sonrakine geç</span></div>
