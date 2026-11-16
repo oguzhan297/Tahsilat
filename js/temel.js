@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=43;
+const APP_VER=44;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  44:['Firma adı yazarken her kelime büyük harfle başlamıyor (otomatik büyük harf kapatıldı)'],
   43:['POS sliplerinde SIRA NO yoksa onay kodu evrak no olarak okunur (Garanti, Ziraat slipleri)','“Onay numarası / Satış tutarı” yazan slipler POS sayılır: tutar Kredi Kartı’na yazılır, “1. NÜSHA” firma sanılmaz','Bozuk okunan “Evrak No” etiketi ve başlığın altındaki firma adı okunur'],
   42:['Firma adını elle yazarken kayıtlı firmalar öneri olarak çıkıyor (ilk harfleri yazman yeter)','Okuma varsayılan olarak tek çekirdekle çalışıyor: iPhone’da çok makbuz okutunca uygulama kapanmasın'],
   41:['Firma silme her firmada çalışıyor (yalnız makbuz kartında geçen firmalar da listeden kaldırılabiliyor)','Yeni: “Kontrol et” çıkan ve düzeltip onayladığın makbuzlar fotoğrafıyla kendiliğinden test arşivine gidiyor (Ayarlar’dan kapatılabilir)','Tarih ve tutar kırpıntısı artık çek tablosuna ya da imza kutusuna denk gelmiyor'],
