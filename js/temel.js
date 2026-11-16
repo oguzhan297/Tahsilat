@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=37;
+const APP_VER=38;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  38:['Makbuz silince uygulama artık donmuyor (liste baştan çizilmiyor, yalnız o kart kalkıyor)','Bilgisayardaki “Luca CSV’leri” sayfasından inen dosyada Türkçe harfler artık bozuk değil'],
   37:['Okuyucunun yardımcı dosyası yüklenemezse okuma takılmıyor, yedek yoldan devam ediyor'],
   36:['Yeni: Luca CSV’ye basınca dosya bilgisayara gider (WhatsApp’a gerek yok). Bilgisayarda oguzhan297.github.io/Zraporu/aktar.html sayfasını aç, İndir’e bas. Ayarlar’dan kapatılabilir.'],
   35:['Düzelttiğin makbuz, “Kontrol et” süzgecinde sen kapatana kadar listeden kaybolmuyor','Okuma yeniden 2 çekirdekle (daha hızlı)'],
