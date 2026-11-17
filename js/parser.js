@@ -90,6 +90,8 @@
     const sirali = lines.map((l, i) => i).sort((a, b) => (/TAR[I1]H/.test(F[b]) ? 1 : 0) - (/TAR[I1]H/.test(F[a]) ? 1 : 0));
     for (const i of sirali) { const m = lines[i].match(tam); if (m && gecerli(+m[1], +m[2], +m[3])) { kesin = trh(+m[1], +m[2], +m[3]); break; } }
     if (kesin) return { v: kesin, kesin: true };
+    // POS slibi: "31/10/26 11:05", "30/1026 11:05" (eğik çizgi okunmamış) — saatin yanındaki kısa yıllı tarih (işaretli)
+    for (let i = 0; i < lines.length; i++) { const m = lines[i].match(/(?<![\d\/.])(\d{2})[\/.](\d{2})[\/.]?(\d{2})\s+\d{2}:\d{2}(?!\d)/); if (m && gecerli(+m[1], +m[2], 2000 + +m[3])) return { v: trh(+m[1], +m[2], 2000 + +m[3]), kesin: false }; }
     // El yazısı: "231.10./2026.." (eğik çizgi 1 okunmuş) gibi bozuk okumalar — yalnız TARİH satırında, her zaman işaretli
     for (let i = 0; i < lines.length; i++) {
       if (!/TAR[I1]H/.test(F[i])) continue;
@@ -199,6 +201,8 @@
     const diger = [];
     // 1) "Evrak No: T59-2026000804", "Makbuz No: 123"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKB?UZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1], true); if (t) return { v: t, diger }; } }
+    // 1a) "Evrak -wo. AB123456": EVRAK etiketinin NO kısmı bozuk okunmuş, ardından harf önekli numara
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/^EVRAK\W{0,3}[A-Z]{0,3}\W{0,3}\s([A-Z]{0,3}\d{5,})$/); if (m) return { v: m[1], diger }; }
     // 1b) etiketi bozuk okunan "Evrak No: AB123456" ("Evro:AB123456", "EUr :AB123456"): E ile başlayan kısa etiket + harf önekli numara
     if (!pos) for (let i = 0; i < F.length; i++) { const m = F[i].match(/^E[A-Z]{1,4}\s?[:.]\s*([A-Z]{1,3}\d{5,})$/); if (m) return { v: m[1], diger }; }
     // 2) "MAKBUZ NO" sütunu: alt satırlardaki 6-10 haneli numaralar
@@ -217,6 +221,10 @@
     const ekli = pos && /TAHS[I1]LAT\s?MAKBUZU/.test(F.join('\n'));
     if (ekli) for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º]\.?\s?|№\s?)?(0\d{5})\.?$/); if (m && !/(STAN|BATCH|[I1]SLEM|POS|TERM|[I1]SYER|ONAY|REF|RRN|PROV|NO\s?:)\W*(?:N[O0°º]\.?\s?)?0\d{5}\.?$/.test(F[i])) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
     if (pos) { for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bONAY\s?(?:KODU|NUMARASI|NO)\s?[:.]?\s*(\d{6})(?!\d)/); if (m) return { v: m[1], diger, zayif: ekli }; } return { v: null, diger }; }
+    // 4b) koçan: "TAHSİLAT MAKBUZU" başlığının hemen altındaki satırın sonunda tek başına 4-6 haneli numara ("… Ürünleri 1234"), ya da
+    //     "K.Kartı 001234 Tarih" gibi satır ortasında sıfırla başlayan 6 hane — basılı seri no (zayıf: her zaman kontrol)
+    for (let i = 0; i + 1 < F.length; i++) { if (!/TAHS[I1]LAT\s?MAKBUZU\s*$/.test(F[i])) continue; const m = F[i + 1].match(/[A-Z.]\s(\d{4,6})$/); if (m && !/TEL|GSM|FAX|NO\s?[:.]|SAN\.?\s?S[I1]T/.test(F[i + 1])) return { v: m[1].replace(/^0+(?=\d)/, ''), diger, zayif: true }; }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{5})\s+TA[RN][I1]/); if (m) return { v: m[1].replace(/^0+(?=\d)/, ''), diger, zayif: true }; }
     // 5) koçan seri numarası: "N 100953", "№ 000330" ya da tek başına / satır sonunda baştan sıfırlı 4-6 hane
     const seri = v => v.replace(/^1(?=0{2,})/, '0').replace(/^0+(?=\d)/, '');
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O°º2]?\s?|№\s?|N\s)(\d{4,6})$/); if (m) return { v: seri(m[1]), diger, zayif: !/^0\d{5}$/.test(m[1]) }; }   // basılı 6 haneli, sıfırla başlayan seri no güvenilir
@@ -253,7 +261,8 @@
     const gor = v => { const c = Math.round(v * 100); cnt[c] = (cnt[c] || 0) + 1; };
     if (pos) {
       // POS slipi: "6.330,32 TL" — tutar satırı
-      for (let i = 0; i < lines.length; i++) { if (!/\bTL\b/.test(F[i]) || BAKIYE.test(F[i])) continue; const a = amounts(lines[i]).filter(v => v > 0); if (a.length) { d.kart = d.toplam = a[0]; gor(a[0]); gor(a[0]); break; } }
+      // "SİCİL NO : 1234 TL." (yanındaki makbuzun TL sütunu aynı satıra düşmüş) tutar değildir; "10.000,00TL" bitişik de olur
+      for (let i = 0; i < lines.length; i++) { if (!/\bTL\b|\dTL\b/.test(F[i]) || BAKIYE.test(F[i]) || /S[I1]C[I1]L\s?NO|\bNO\s?[:.]\s*\d+\s*TL\b/.test(F[i])) continue; const a = amounts(lines[i]).filter(v => v > 0); if (a.length) { d.kart = d.toplam = a[0]; gor(a[0]); gor(a[0]); break; } }
     } else {
       const tablo = [], topAday = [];   // yalnız başlık olan ödeme satırları ("NAKİT ÇEK KREDİ KARTI TOPLAM") — tutarlar alt satırda
       for (let i = 0; i < lines.length; i++) {
@@ -404,5 +413,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 53, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 54, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
