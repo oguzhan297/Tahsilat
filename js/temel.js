@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=54;
+const APP_VER=55;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  55:['Başlığın altındaki tek bir sayıdan tahmin edilen toplam artık her zaman turuncu işaretleniyor (bozuk okumada “119,00” gibi yanlış tutar işaretsiz geliyordu)'],
   54:['POS slibinde ticaret sicil no artık tutar sanılmıyor; “10.000,00TL” gibi bitişik tutarlar okunuyor','POS slibindeki kısa tarih (“31/10/26 11:03”) okunuyor','“Evrak No” bozuk okunsa da numara alınıyor; el yazısı koçanlarda başlık altındaki basılı makbuz numarası öneriliyor (kontrol için turuncu)'],
   53:['Makbuzlar okunup bitince okuyucu hemen kapanıp belleği boşaltıyor (39 makbuzdan sonra kart açarken uygulamanın dondurulup yeniden açılması için)'],
   52:['Makbuza iliştirilmiş POS slibinde evrak no artık makbuzun kendi sıra numarası (onay kodu değil)','“Sıra No” bozuk okunsa da makbuz numarası doğru alınıyor; vergi/mersis numarası evrak no sanılmıyor','“Tahsil Edilen” ve “C/H Mahsuben” tutarları ile el yazısındaki “2eee”, “S000” gibi okumalar (2000, 5000) tanınıyor'],

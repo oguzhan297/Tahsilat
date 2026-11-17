@@ -308,7 +308,7 @@
         const alt = el ? elRakam(lines[tb.i + 1] || '') : (lines[tb.i + 1] || ''); if (BAKIYE.test(F[tb.i + 1] || '')) continue;
         const a = amounts(alt).filter(v => v > 0); if (!a.length) continue;
         a.forEach(gor);
-        d.toplam = a[a.length - 1];
+        d.toplam = a[a.length - 1]; if ((cnt[Math.round(d.toplam * 100)] || 0) < 2) zayifTop = true;   // başlığın altındaki tutar tahmini: gürültü sayısı da olabilir (yenigun-3867: "119"), her zaman kontrol edilir
         if (a.length > 1 && !a.every(v => Math.abs(v - a[0]) < 0.005)) notes.push('Ödeme sütunları ayrılamadı: ' + a.join(' / '));
       }
     }
@@ -413,5 +413,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 54, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 55, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
