@@ -1,10 +1,10 @@
 // Uygulamayı internetsiz de açılabilir yapar. Sürüm değişince eski önbellek silinir.
-const V='tahsilat-v50';
+const V='tahsilat-v51';
 // PaddleOCR (paddle.js, ONNX Runtime, modeller) büyük dosyalar: ayrı önbellekte durur, uygulama sürümü değişince silinmez.
 // Önbellek adı Z Raporu uygulamasıyla ortak (aynı adres: oguzhan297.github.io) → modeller iki uygulama için bir kez iner.
 const OCR='zrapor-ocr-1';
 const isOcr=u=>u.hostname==='paddle-model-ecology.bj.bcebos.com'||(u.hostname==='cdn.jsdelivr.net'&&u.pathname.startsWith('/npm/onnxruntime-web@'))||(u.origin===self.location.origin&&(u.pathname.endsWith('/paddle.js')||/\/model\/[^/]+\.tar$/.test(u.pathname)));
-const SHELL=['./','./index.html','./css/uygulama.css?v=50','./js/parser.js?v=50','./js/goruntu.js?v=50','./js/paddle-worker.js?v=50','./vendor/ort-wasm-simd-threaded.mjs?o=1.31.1','./js/temel.js?v=50','./js/kutu.js?v=50','./js/depo.js?v=50','./js/ayarlar.js?v=50','./js/kontrol.js?v=50','./js/kalite.js?v=50','./js/arayuz.js?v=50','./js/okuyucu-claude.js?v=50','./js/okuyucu-tesseract.js?v=50','./js/okuyucu-paddle.js?v=50','./js/okuma.js?v=50','./js/disari.js?v=50','./js/ornek.js?v=50','./js/firmalar.js?v=50','./js/baslat.js?v=50','./ikon.svg?v=50','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
+const SHELL=['./','./index.html','./css/uygulama.css?v=51','./js/parser.js?v=51','./js/goruntu.js?v=51','./js/paddle-worker.js?v=51','./vendor/ort-wasm-simd-threaded.mjs?o=1.31.1','./js/temel.js?v=51','./js/kutu.js?v=51','./js/depo.js?v=51','./js/ayarlar.js?v=51','./js/kontrol.js?v=51','./js/kalite.js?v=51','./js/arayuz.js?v=51','./js/okuyucu-claude.js?v=51','./js/okuyucu-tesseract.js?v=51','./js/okuyucu-paddle.js?v=51','./js/okuma.js?v=51','./js/disari.js?v=51','./js/ornek.js?v=51','./js/firmalar.js?v=51','./js/baslat.js?v=51','./ikon.svg?v=51','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 // cache:'reload' → tarayıcının kendi önbelleğindeki eski kopyayı değil, sunucudaki güncel dosyayı al
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,u.startsWith('http')?{mode:'cors'}:{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()))});

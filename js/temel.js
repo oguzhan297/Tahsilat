@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=50;
+const APP_VER=51;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  51:['Okunan firma adı yarımsa ya da makbuzda kayıtlı bir firma geçiyorsa, uygulama önce firmalar listesinden eşleştirip tam adı yazıyor (yarım ad eklemiyor)'],
   50:['Okuma bitince okuyucu 25 sn sonra kapanıp belleği boşaltıyor: 31 makbuz okuduktan sonra kartlara bakarken uygulamanın kendiliğinden kapanıp açılması düzeltildi'],
   49:['El yazısı örnekleri artık değerin yazıldığı yerden, daha net kesiliyor ve aynı makbuz tekrar gönderilmiyor (okuyucuyu senin el yazılarınla eğitmek için)'],
   48:['El yazısı tarihler daha sık okunuyor (ör. “22.10..../26”, “31(0120.26”, yılı yazılmamış “24.10”); okunan tarih yine turuncu gelir, fotoğrafla karşılaştır'],
@@ -149,7 +150,19 @@ function firmaAd(okunan,text){const tel=telNolar(text);
   const k=nkey(okunan);if(FIRMA[k]||FIRMA0[k])return FIRMA[k]||FIRMA0[k];
   if(k.length>=8)for(const T of [FIRMA,FIRMA0])for(const a in T){if(Math.abs(a.length-k.length)>3)continue;let d=0;{const p=Array.from({length:a.length+1},(_,j)=>j);for(let i=1;i<=k.length;i++){let q=p[0];p[0]=i;for(let j=1;j<=a.length;j++){const t=p[j];p[j]=Math.min(p[j]+1,p[j-1]+1,q+(k[i-1]===a[j-1]?0:1));q=t}}d=p[a.length]}
     if(d<=Math.max(1,Math.floor(Math.max(a.length,k.length)*.12)))return T[a]}   // tek-iki harf farkı (EERU AVCI ↔ EBRU AVCI)
+  const lb=firmaListedenBul(okunan,text);if(lb)return lb;
   return trFirma(okunan)}
+// Okuyucu adı yarım okursa ("Seda gıda iş mak") ya da makbuzun başka yerinde kayıtlı bir firma geçerse listedeki firmayı seç
+const fkey=s=>nkey(s).replace(/[İIŞÇĞÜÖ]/g,c=>({İ:'I',I:'I',Ş:'S',Ç:'C',Ğ:'G',Ü:'U',Ö:'O'}[c]));
+function firmaListedenBul(okunan,text){const ad=new Map();
+  for(const T of [FIRMA,FIRMA0])for(const a in T)ad.set(fkey(a),T[a]);
+  for(const T of [FIRMA,FIRMA0,FIRMA_TEL,FIRMA_TEL0])for(const a in T)ad.set(fkey(T[a]),T[a]);
+  const t=fkey(text||'');let en=null,el=0;
+  if(t)for(const [a,n] of ad)if(a.length>=8&&a.length>el&&t.includes(a)){en=n;el=a.length}
+  if(en)return en;
+  const k=fkey(okunan);if(k.length<6)return null;
+  const s=new Set();for(const [a,n] of ad)if(a.startsWith(k)||(a.length>=6&&k.startsWith(a)))s.add(n);
+  return s.size===1?[...s][0]:null}
 function firmaOgren(okunan,dogru,text){if(!dogru)return false;let ok=false;
   if(okunan&&nkey(okunan)!==nkey(dogru)){FIRMA[nkey(okunan)]=dogru;ok=true}
   for(const t of telNolar(text)){FIRMA_TEL[t]=dogru;ok=true}
