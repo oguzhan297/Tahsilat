@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=51;
+const APP_VER=52;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  52:['Makbuza iliştirilmiş POS slibinde evrak no artık makbuzun kendi sıra numarası (onay kodu değil)','“Sıra No” bozuk okunsa da makbuz numarası doğru alınıyor; vergi/mersis numarası evrak no sanılmıyor','“Tahsil Edilen” ve “C/H Mahsuben” tutarları ile el yazısındaki “2eee”, “S000” gibi okumalar (2000, 5000) tanınıyor'],
   51:['Okunan firma adı yarımsa ya da makbuzda kayıtlı bir firma geçiyorsa, uygulama önce firmalar listesinden eşleştirip tam adı yazıyor (yarım ad eklemiyor)'],
   50:['Okuma bitince okuyucu 25 sn sonra kapanıp belleği boşaltıyor: 31 makbuz okuduktan sonra kartlara bakarken uygulamanın kendiliğinden kapanıp açılması düzeltildi'],
   49:['El yazısı örnekleri artık değerin yazıldığı yerden, daha net kesiliyor ve aynı makbuz tekrar gönderilmiyor (okuyucuyu senin el yazılarınla eğitmek için)'],

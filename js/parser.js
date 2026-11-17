@@ -41,6 +41,11 @@
     return out;
   }
 
+  // El yazısında sıfır çoğu zaman e/c/o, baştaki 5 S okunur: "200e" "2eee" "Scee" "1670.ce" → 2000 2000 5000 1670.00 (yalnız rakam gibi duran kelimelerde)
+  function elRakam(s) {
+    return s.split(' ').map(w => /^[1-9S][0-9oOceECQ]{2,}(?:[.,][0-9oOceECQ]{2})?$/.test(w) && /[0-9]/.test(w.slice(1)) | /^S[0oOceEC]{3,}$/.test(w) ? w.replace(/^S/, '5').replace(/[oOceECQ]/g, '0') : w).join(' ');
+  }
+
   // ---- Yazıyla tutar ("DortBinYediYuz TL", "ikiBinYirmiYedi TL Elli Kurus") ----
   const SAYI = { sifir: 0, bir: 1, iki: 2, uc: 3, dort: 4, bes: 5, alti: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10, yirmi: 20, otuz: 30, kirk: 40, elli: 50, altmis: 60, yetmis: 70, seksen: 80, doksan: 90 };
   const SOZ = /^(milyon|altmis|yetmis|seksen|doksan|turklirasi|yirmi|sekiz|dokuz|sifir|kurus|otuz|kirk|elli|alti|yedi|dort|lira|bin|yuz|bir|iki|bes|uc|on|tl|kr)/;
@@ -193,26 +198,29 @@
     const tok = (s, kisa) => { const m = String(s).trim().match(kisa ? /^[:.\s]*(?:[0O]\s?[:.]\s*)?([A-Z0-9][A-Z0-9\-\/]*)/ : /^[:.\s]*([A-Z0-9][A-Z0-9\-\/]{2,})/); return m && (kisa ? /\d/ : /\d{3}/).test(m[1]) ? m[1] : null; };
     const diger = [];
     // 1) "Evrak No: T59-2026000804", "Makbuz No: 123"
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKBUZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1], true); if (t) return { v: t, diger }; } }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:EVRAK|MAKB?UZ|BELGE|F[I1]S)\s?(?:NO|NUMARASI)\s?[:.]?\s*(.*)$/); if (m) { const t = tok(m[1], true); if (t) return { v: t, diger }; } }
     // 1b) etiketi bozuk okunan "Evrak No: AB123456" ("Evro:AB123456", "EUr :AB123456"): E ile başlayan kısa etiket + harf önekli numara
     if (!pos) for (let i = 0; i < F.length; i++) { const m = F[i].match(/^E[A-Z]{1,4}\s?[:.]\s*([A-Z]{1,3}\d{5,})$/); if (m) return { v: m[1], diger }; }
     // 2) "MAKBUZ NO" sütunu: alt satırlardaki 6-10 haneli numaralar
     for (let i = 0; i < F.length; i++) if (/MAKBUZ\s?NO/.test(F[i])) {
-      const ns = []; for (let j = i + 1; j < Math.min(F.length, i + 12); j++) { if (/TOPLAM|YALN[I1]Z/.test(F[j])) break; const m = F[j].match(/(?<!\d)(\d{6,10})(?!\d)(?:\s\d)?\s*$/); if (m) ns.push(m[1]); }
+      const ns = []; for (let j = i + 1; j < Math.min(F.length, i + 12); j++) { if (/TOPLAM|YALN[I1]Z/.test(F[j])) break; if (/VERG[I1]|V\.\s?D|VKN|TCKN|\bTEL|GSM|FAX|MERS[I1]S|[I1]BAN|HESAP/.test(F[j])) continue; const m = F[j].match(/(?<!\d)(\d{6,10})(?!\d)(?:\s\d)?\s*$/); if (m) ns.push(m[1]); }
       if (ns.length) return { v: ns[0], diger: ns.slice(1) };
     }
     // 3) satır başında "No: F3528102026017"
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/^(?:N[O0°º]|№)\s?[:.]\s*(.*)$/); if (m) { const t = tok(m[1]); if (t) return { v: t, diger }; } }
     // 3b) "Seri A 884435": seri harfi + sıra numarası
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bSER[I1]\s?[A-Z]\s?[:.]?\s+(\d{4,8})\b/); if (m) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
-    // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2])?\s?[:.]?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; }
+    // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"; bozuk: "Sira NNo 1234", "Sira Ngo (1234", "Sira Nofo 1234"
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2]|N[NO0GF][O0°º2]{0,2}(?:[F][O0])?)?\s?[:.]?\s*\(?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; }
     // POS slipinde SIRA NO yoksa onay kodu evrak no olur ("ONAY KODU: 123456", "ONAY NUMARASI:123456")
-    if (pos) { for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bONAY\s?(?:KODU|NUMARASI|NO)\s?[:.]?\s*(\d{6})(?!\d)/); if (m) return { v: m[1], diger }; } return { v: null, diger }; }
+    // POS slibi bir tahsilat makbuzuna iliştirilmişse evrak no makbuzun basılı sıra numarasıdır ("No 001234", "08 012345"), onay kodu değil
+    const ekli = pos && /TAHS[I1]LAT\s?MAKBUZU/.test(F.join('\n'));
+    if (ekli) for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º]\.?\s?|№\s?)?(0\d{5})\.?$/); if (m && !/(STAN|BATCH|[I1]SLEM|POS|TERM|[I1]SYER|ONAY|REF|RRN|PROV|NO\s?:)\W*(?:N[O0°º]\.?\s?)?0\d{5}\.?$/.test(F[i])) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
+    if (pos) { for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bONAY\s?(?:KODU|NUMARASI|NO)\s?[:.]?\s*(\d{6})(?!\d)/); if (m) return { v: m[1], diger, zayif: ekli }; } return { v: null, diger }; }
     // 5) koçan seri numarası: "N 100953", "№ 000330" ya da tek başına / satır sonunda baştan sıfırlı 4-6 hane
     const seri = v => v.replace(/^1(?=0{2,})/, '0').replace(/^0+(?=\d)/, '');
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O°º2]?\s?|№\s?|N\s)(\d{4,6})$/); if (m) return { v: seri(m[1]), diger, zayif: !/^0\d{5}$/.test(m[1]) }; }   // basılı 6 haneli, sıfırla başlayan seri no güvenilir
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{3,5})$/); if (m && !/TEL|GSM|FAX|IBAN/.test(F[i].slice(Math.max(0, F[i].length - m[1].length - 14)))) return { v: seri(m[1]), diger, zayif: true }; }
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(0\d{3,5})$/); if (m && !/MERS[I1]S|VERG[I1]/.test(F[i]) && !/TEL|GSM|FAX|IBAN/.test(F[i].slice(Math.max(0, F[i].length - m[1].length - 14)))) return { v: seri(m[1]), diger, zayif: true }; }
     return { v: null, diger };
   }
 
@@ -223,7 +231,7 @@
     kart: /\bPOS\b|KRED[I1]\s?KART[I1]?|\bK\.?\s?KART[I1]\b|\bV[I1]SA\b|\bKART\s?[I1]LE\b/,
     cek: /\bCEK\b/,
     diger: /\bHAVALE\b|\bEFT\b|\bSENET\b/,
-    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R|\bTUTAR\b|L[I1]RAS[I1]\b/
+    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R|TAHS[I1]L\s?ED[I1]LEN\b|\bMAHSUBEN\b|\bTUTAR\b|L[I1]RAS[I1]\b/
   };
   function parse(text) {
     const lines = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && !/^—— \d+\. okuma ——$/.test(l));
@@ -288,7 +296,7 @@
         if (fark.length > 1) { const es = fark.find(v => Math.abs(v - p) < 0.005); if (es != null) d.toplam = es; notes.push('Birden çok TOPLAM okundu: ' + fark.join(' / ')); } }
       for (const tb of tablo) {
         if (d.toplam != null || d.nakit != null || d.kart != null || d.cek != null) break;
-        const alt = lines[tb.i + 1] || ''; if (BAKIYE.test(F[tb.i + 1] || '')) continue;
+        const alt = el ? elRakam(lines[tb.i + 1] || '') : (lines[tb.i + 1] || ''); if (BAKIYE.test(F[tb.i + 1] || '')) continue;
         const a = amounts(alt).filter(v => v > 0); if (!a.length) continue;
         a.forEach(gor);
         d.toplam = a[a.length - 1];
@@ -396,5 +404,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 51, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 52, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
