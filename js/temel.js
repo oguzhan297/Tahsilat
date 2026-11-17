@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=49;
+const APP_VER=50;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  50:['Okuma bitince okuyucu 25 sn sonra kapanıp belleği boşaltıyor: 31 makbuz okuduktan sonra kartlara bakarken uygulamanın kendiliğinden kapanıp açılması düzeltildi'],
   49:['El yazısı örnekleri artık değerin yazıldığı yerden, daha net kesiliyor ve aynı makbuz tekrar gönderilmiyor (okuyucuyu senin el yazılarınla eğitmek için)'],
   48:['El yazısı tarihler daha sık okunuyor (ör. “22.10..../26”, “31(0120.26”, yılı yazılmamış “24.10”); okunan tarih yine turuncu gelir, fotoğrafla karşılaştır'],
   47:['Makbuzlar yeniden iki çekirdekle okunuyor: çok makbuz birden eklendiğinde okuma daha hızlı (iPhone’da 74 makbuzla denendi, sorun çıkmadı)'],

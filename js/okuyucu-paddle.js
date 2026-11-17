@@ -42,7 +42,9 @@ async function ekranAcikTut(ac){try{if(ac){if(!ekranKilit&&navigator.wakeLock)ek
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&onIndir&&!ekranKilit)ekranAcikTut(true)});
 // Okuma motoru: önce işçide (ekran donmaz), işçi açılamazsa / çökerse sayfada (eski yol).
 // motor = { tur:'isci'|'ana', resim(id,src), oku(id,src,opt) → kutular, birak(id) }
-let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false;
+let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false,pdlT=0;
+// okuma bitince işçi 25 sn boşta kalırsa kapat: model + WASM belleği iPhone'da uygulamanın kapanmasına yol açıyordu
+function bostaZamanla(){clearTimeout(pdlT);pdlT=setTimeout(()=>{if(pdl&&pdl.tur==='isci'&&!pdl.olu()){try{pdl.kapat()}catch(e){}pdl=null;kutu('motorKapat',{})}},25000)}
 // Çok çekirdek: sayfa "cross-origin isolated" ise (sw.js başlıkları ekler) okuma birden çok çekirdeğe bölünür (Z Raporu'nda iPhone: 5,5 → 3,8 sn).
 // Yardımcı iş parçacıkları ORT'nin yükleyicisinden (vendor/ort-wasm-simd-threaded.mjs, ORT sürümüyle aynı) açılır. Sorun çıkarsa tek çekirdeğe dönülür (th_thr='1').
 const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
@@ -104,7 +106,7 @@ async function anaMotor(f){
     birak(){}};
 }
 async function getPaddle(onProg){
-  pdlProg=onProg;   // ilerleme her zaman o an okunan karta yazılsın
+  clearTimeout(pdlT);pdlProg=onProg;   // ilerleme her zaman o an okunan karta yazılsın
   if(pdl&&!pdl.olu())return pdl;
   if(!pdlLoading)pdlLoading=(async()=>{
     pdlProg&&pdlProg('İlk kullanım: PaddleOCR indiriliyor (bir kez)…');
@@ -194,7 +196,7 @@ async function extractPaddle(r,ikinci){
         if(res.el&&all.length>=2)break;   // el yazısı: iki okuma yeter, gerisini kullanıcı kontrol eder
         if(all.length>=2){const mm=TParse.merge(all);if(!mm.unsure.some(k=>k!=='firma'))break}
       }
-    }finally{for(let i=0;i<ps.length;i++)motor.birak(sid(i))}
+    }finally{for(let i=0;i<ps.length;i++)motor.birak(sid(i));bostaZamanla()}
     // toplamları tam tutan bir okuma varsa onu al; yoksa okumaları alan alan birleştir
     const merged=best.sc>=6||all.length<2?best.res:TParse.merge(all);
     applyParse(r,best.sc>=6||all.length<2?best.text:texts.map((t,i)=>`—— ${i+1}. okuma ——\n`+t).join('\n'),merged);
