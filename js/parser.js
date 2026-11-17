@@ -404,5 +404,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 52, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 53, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
