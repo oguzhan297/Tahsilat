@@ -1,8 +1,9 @@
 // Temel: alan tanımları, tutar tamamlama, sayı-tarih biçimleri, küçük yardımcılar (her dosya bunlara dayanır)
 // Uygulama sürümü: arac/surum.mjs ile değiştir (index.html, sw.js, parser.js, işçi aynı anda güncellenir)
-const APP_VER=55;
+const APP_VER=56;
 // Her sürümde kullanıcıya gösterilecek kısa notlar (güncellemeden sonra bir kez gösterilir). Yeni sürümde buraya ekle.
 const YENILIK={
+  56:['Seri çekimde okuyucu her fotoğraftan sonra kapanıp yeniden yüklenmiyor (uygulama yavaşlamıştı); kamera ekranında iPhone’un Kamera Denetimi tuşuna dokununca yazı seçimi/imleç çıkması engellendi'],
   55:['Başlığın altındaki tek bir sayıdan tahmin edilen toplam artık her zaman turuncu işaretleniyor (bozuk okumada “119,00” gibi yanlış tutar işaretsiz geliyordu)'],
   54:['POS slibinde ticaret sicil no artık tutar sanılmıyor; “10.000,00TL” gibi bitişik tutarlar okunuyor','POS slibindeki kısa tarih (“31/10/26 11:03”) okunuyor','“Evrak No” bozuk okunsa da numara alınıyor; el yazısı koçanlarda başlık altındaki basılı makbuz numarası öneriliyor (kontrol için turuncu)'],
   53:['Makbuzlar okunup bitince okuyucu hemen kapanıp belleği boşaltıyor (39 makbuzdan sonra kart açarken uygulamanın dondurulup yeniden açılması için)'],

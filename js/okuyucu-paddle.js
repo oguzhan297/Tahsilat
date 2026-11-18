@@ -44,7 +44,8 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 // motor = { tur:'isci'|'ana', resim(id,src), oku(id,src,opt) → kutular, birak(id) }
 let pdl=null,pdlLoading=null,pdlProg=null,isciYok=false,pdlT=0;
 // okuma bitince işçi 4 sn boşta kalırsa kapat (kullanıcı hemen kart açıyor; bellek): model + WASM belleği iPhone'da uygulamanın kapanmasına yol açıyordu
-function bostaZamanla(){clearTimeout(pdlT);pdlT=setTimeout(()=>{if(pdl&&pdl.tur==='isci'&&!pdl.olu()){try{pdl.kapat()}catch(e){}pdl=null;kutu('motorKapat',{})}},4000)}
+function bostaZamanla(){clearTimeout(pdlT);pdlT=setTimeout(()=>{if(document.body.classList.contains('kamera-acik')){bostaZamanla();return}   // kamera açıkken (seri çekim) kapatma: her makbuzda model yeniden yüklenip uygulamayı yavaşlatıyordu
+    if(pdl&&pdl.tur==='isci'&&!pdl.olu()){try{pdl.kapat()}catch(e){}pdl=null;kutu('motorKapat',{})}},4000)}
 // Çok çekirdek: sayfa "cross-origin isolated" ise (sw.js başlıkları ekler) okuma birden çok çekirdeğe bölünür (Z Raporu'nda iPhone: 5,5 → 3,8 sn).
 // Yardımcı iş parçacıkları ORT'nin yükleyicisinden (vendor/ort-wasm-simd-threaded.mjs, ORT sürümüyle aynı) açılır. Sorun çıkarsa tek çekirdeğe dönülür (th_thr='1').
 const ORT_MJS='vendor/ort-wasm-simd-threaded.mjs?o=1.31.1';
