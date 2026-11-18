@@ -214,12 +214,20 @@
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/^(?:N[O0°º]|№)\s?[:.]\s*(.*)$/); if (m) { const t = tok(m[1]); if (t) return { v: t, diger }; } }
     // 3b) "Seri A 884435": seri harfi + sıra numarası
     for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bSER[I1]\s?[A-Z]\s?[:.]?\s+(\d{4,8})\b/); if (m) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
-    // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"; bozuk: "Sira NNo 1234", "Sira Ngo (1234", "Sira Nofo 1234"
-    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2]|N[NO0GF][O0°º2]{0,2}(?:[F][O0])?)?\s?[:.]?\s*\(?\s*([A-Z]{0,3}\d{3,})/); if (m) return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; }
-    // POS slipinde SIRA NO yoksa onay kodu evrak no olur ("ONAY KODU: 123456", "ONAY NUMARASI:123456")
-    // POS slibi bir tahsilat makbuzuna iliştirilmişse evrak no makbuzun basılı sıra numarasıdır ("No 001234", "08 012345"), onay kodu değil
+    // POS slibi bir tahsilat makbuzuna iliştirilmişse evrak no makbuzun basılı sıra numarasıdır ("No 001234", "08 012345", "0018 NO:012345"),
+    // onay kodu ya da POS'un harf önekli SIRA NO'su ("IA000123") değil
     const ekli = pos && /TAHS[I1]LAT\s?MAKBUZU/.test(F.join('\n'));
-    if (ekli) for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º]\.?\s?|№\s?)?(0\d{5})\.?$/); if (m && !/(STAN|BATCH|[I1]SLEM|POS|TERM|[I1]SYER|ONAY|REF|RRN|PROV|NO\s?:)\W*(?:N[O0°º]\.?\s?)?0\d{5}\.?$/.test(F[i])) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
+    const ekliNo = () => {
+      for (let i = 0; i < F.length; i++) { const m = F[i].match(/(?:^|\s)(?:N[O0°º]\.?\s?[:.]?\s?|№\s?)?(0\d{5})\.?$/); if (m && !/(STAN|BATCH|[I1]SLEM|POS|TERM|[I1]SYER|ONAY|REF|RRN|PROV|[A-Z]{2,}\.?\s?NO\s?:)\W*(?:N[O0°º]\.?\s?[:.]?\s?)?0\d{5}\.?$/.test(F[i])) return { v: m[1].replace(/^0+(?=\d)/, ''), diger }; }
+      // "TAHSİLAT MAKBUZU" başlığından sonraki üç satırda, satır sonunda kelimeden sonra tek başına 4-6 hane ("… Ürünleri 1234") — zayıf
+      for (let i = 0; i < F.length; i++) { if (!/TAHS[I1]LAT\s?MAKBUZU\s*$/.test(F[i])) continue;
+        for (let j = i + 1; j < Math.min(F.length, i + 4); j++) { const m = F[j].match(/[A-Z]{3,}\s(\d{4,6})$/); if (m && !/TEL|GSM|FAX|NO\s?[:.]|SAN\.?\s?S[I1]T|S[I1]C[I1]L|KOD|PK/.test(F[j].slice(Math.max(0, F[j].length - m[1].length - 16)))) return { v: m[1].replace(/^0+(?=\d)/, ''), diger, zayif: true }; } }
+      return null;
+    };
+    // 4) "SIRA No 005185", "SIRA 004766", POS: "SIRA NO: IA000010"; bozuk: "Sira NNo 1234", "Sira Ngo (1234", "Sira Nofo 1234"
+    for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bS[I1]RA\s?(?:N[O0°º2]|N[NO0GF][O0°º2]{0,2}(?:[F][O0])?)?\s?[:.]?\s*\(?\s*([A-Z]{0,3}\d{3,})/); if (m) { if (ekli && /^[A-Z]/.test(m[1])) { const e = ekliNo(); if (e) return e; } return { v: pos ? m[1] : m[1].replace(/^0+(?=\d)/, ''), diger }; } }
+    // POS slipinde SIRA NO yoksa onay kodu evrak no olur ("ONAY KODU: 123456", "ONAY NUMARASI:123456")
+    if (ekli) { const e = ekliNo(); if (e) return e; }
     if (pos) { for (let i = 0; i < F.length; i++) { const m = F[i].match(/\bONAY\s?(?:KODU|NUMARASI|NO)\s?[:.]?\s*(\d{6})(?!\d)/); if (m) return { v: m[1], diger, zayif: ekli }; } return { v: null, diger }; }
     // 4b) koçan: "TAHSİLAT MAKBUZU" başlığının hemen altındaki satırın sonunda tek başına 4-6 haneli numara ("… Ürünleri 1234"), ya da
     //     "K.Kartı 001234 Tarih" gibi satır ortasında sıfırla başlayan 6 hane — basılı seri no (zayıf: her zaman kontrol)
@@ -235,11 +243,11 @@
   // ---- Ana ayrıştırıcı ----
   const BAKIYE = /BAK[I1][YV]E|KALAN|BORC|ALACAK/;
   const K = {
-    nakit: /\bNAK[I1]T\b/,
+    nakit: /\bNAK[I1]T\b|\b[A-Z]{0,2}K[I1]T\s?TAHS[I1]LAT/,
     kart: /\bPOS\b|KRED[I1]\s?KART[I1]?|\bK\.?\s?KART[I1]\b|\bV[I1]SA\b|\bKART\s?[I1]LE\b/,
     cek: /\bCEK\b/,
     diger: /\bHAVALE\b|\bEFT\b|\bSENET\b/,
-    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R|TAHS[I1]L\s?ED[I1]LEN\b|\bMAHSUBEN\b|\bTUTAR\b|L[I1]RAS[I1]\b/
+    toplam: /TOPLAM\s?(?:TAHS[I1]LAT|TUTAR)?|TOPLA[SNHRK]?\s?TAHS[I1]LAT|\bYEKUN\b|TAHS[I1]L\s?ED[I1]LM[I1]ST[I1]R|TAHS[I1]L\s?ED[I1]LEN\b|\bMAHSUBEN\b|\bTUTAR\b|L[I1]RAS[I1]\b/
   };
   function parse(text) {
     const lines = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && !/^—— \d+\. okuma ——$/.test(l));
@@ -262,7 +270,8 @@
     if (pos) {
       // POS slipi: "6.330,32 TL" — tutar satırı
       // "SİCİL NO : 1234 TL." (yanındaki makbuzun TL sütunu aynı satıra düşmüş) tutar değildir; "10.000,00TL" bitişik de olur
-      for (let i = 0; i < lines.length; i++) { if (!/\bTL\b|\dTL\b/.test(F[i]) || BAKIYE.test(F[i]) || /S[I1]C[I1]L\s?NO|\bNO\s?[:.]\s*\d+\s*TL\b/.test(F[i])) continue; const a = amounts(lines[i]).filter(v => v > 0); if (a.length) { d.kart = d.toplam = a[0]; gor(a[0]); gor(a[0]); break; } }
+      for (let i = 0; i < lines.length; i++) { const kes = F[i].search(/S[I1]C[I1]L\s?NO/), f = kes >= 0 ? F[i].slice(0, kes) : F[i], l = kes >= 0 ? lines[i].slice(0, kes) : lines[i];   // "12.345,00 TL ret Sicil No: 1234": yanındaki makbuzun satırı
+        if (!/\bTL\b|\dTL\b/.test(f) || BAKIYE.test(f) || /\bNO\s?[:.]\s*\d+\s*TL\b/.test(f)) continue; const a = amounts(l).filter(v => v > 0); if (a.length) { d.kart = d.toplam = a[0]; gor(a[0]); gor(a[0]); break; } }
     } else {
       const tablo = [], topAday = [];   // yalnız başlık olan ödeme satırları ("NAKİT ÇEK KREDİ KARTI TOPLAM") — tutarlar alt satırda
       for (let i = 0; i < lines.length; i++) {
@@ -413,5 +422,5 @@
     return { d, unsure: [...unsure], notes: [...new Set(notes)], found: Math.max(...list.map(r => r.found)), el, pos: en.pos, makbuz: list.some(r => r.makbuz), cnt, tarihKesin: !unsure.has('tarih') };
   }
 
-  root.TParse = { version: 56, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
+  root.TParse = { version: 57, parse, consistency, merge, amounts, yaziyla, fold, uzlas };
 })(typeof window !== 'undefined' ? window : globalThis);
